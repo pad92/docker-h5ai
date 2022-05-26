@@ -13,7 +13,7 @@ COPY class-setup.php.patch /class-setup.php.patch
 RUN patch -p1 -u -d /h5ai/build/_h5ai/private/php/core/ -i /class-setup.php.patch \
  && rm /class-setup.php.patch
 
-FROM nginx:1.20.2-alpine
+FROM nginx:1.22.0-alpine
 
 LABEL maintainer="pad92" \
       org.label-schema.url="https://github.com/pad92/docker-h5ai/blob/master/README.md" \
