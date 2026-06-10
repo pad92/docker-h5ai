@@ -1,10 +1,10 @@
 #!/bin/sh
 
-HTPASSWD=$(/usr/bin/htpasswd -cb /etc/nginx/.htpasswd ${ENV_U} ${ENV_P} 2>/dev/null 1>&2 )
-
-if [ $? -eq 0 ]; then
-    sed -i 's/#auth_/auth_/g' /etc/nginx/nginx.conf
+if [ -n "${ENV_U}" ] && [ -n "${ENV_P}" ]; then
+    /usr/bin/htpasswd -cb /etc/nginx/.htpasswd "${ENV_U}" "${ENV_P}" >/dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        sed -i 's/#auth_/auth_/g' /etc/nginx/nginx.conf
+    fi
 fi
 
-
-/usr/sbin/nginx -c /etc/nginx/nginx.conf
+exec /usr/sbin/nginx -c /etc/nginx/nginx.conf

@@ -4,84 +4,52 @@ services:
 - docker:dind
 
 stages:
+- test
 - build_image
 
 before_script:
 - docker login -u "${CI_REGISTRY_USER}" -p "${CI_JOB_TOKEN}" "${CI_REGISTRY}"
 
-build_image.default:
-  stage: build_image
+test_local:
+  stage: test
+  before_script: []
   script:
-  - docker buildx create --driver docker-container --use
-  - docker buildx build
-    --provenance=false
-    --pull
-    --build-arg BUILD_NAME="${CI_PROJECT_NAME}"
-    --build-arg BUILD_DATE="$(date '+%FT%T.%s%z')"
-    --build-arg BUILD_VCSREF="${CI_COMMIT_SHA:0:8}"
-    --platform=linux/arm64,linux/amd64,linux/arm/v7
-    --push
-    -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}"
-    .
-  only:
-  - master
-  except:
-  - tags
+  - apk add --no-cache make curl
+  - make build
+  - make test
+  - make trivy
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH
 
-build_image.feature:
+build_image:
   stage: build_image
   script:
   - docker buildx create --driver docker-container --use
-  - docker buildx build
-    --provenance=false
-    --pull
-    --build-arg BUILD_NAME="${CI_PROJECT_NAME}"
-    --build-arg BUILD_DATE="$(date '+%FT%T.%s%z')"
-    --build-arg BUILD_VCSREF="${CI_COMMIT_SHA:0:8}"
-    --platform=linux/arm64,linux/amd64,linux/arm/v7
-    --push
-    -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME%%-*}"
-    .
-  only:
-  - "/^[0-9]+-.*$/"
-  except:
-  - tags
-
-build_image.nonstd:
-  stage: build_image
-  script:
-  - docker buildx create --driver docker-container --use
-  - docker buildx build
-    --provenance=false
-    --pull
-    --build-arg BUILD_NAME="${CI_PROJECT_NAME}"
-    --build-arg BUILD_DATE="$(date '+%FT%T.%s%z')"
-    --build-arg BUILD_VCSREF="${CI_COMMIT_SHA:0:8}"
-    --platform=linux/arm64,linux/amd64,linux/arm/v7
-    --push
-    -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME:0:128}"
-    .
-  only:
-  - "/^[a-zA-Z]+.*$/"
-  except:
-  - master
-  - dev
-  - tags
-
-build_image.tag:
-  stage: build_image
-  script:
-  - docker buildx create --driver docker-container --use
-  - docker buildx build
-    --provenance=false
-    --pull
-    --build-arg BUILD_NAME="${CI_PROJECT_NAME}"
-    --build-arg BUILD_DATE="$(date '+%FT%T.%s%z')"
-    --build-arg BUILD_VCSREF="${CI_COMMIT_SHA:0:8}"
-    --platform=linux/arm64,linux/amd64,linux/arm/v7
-    --push
-    -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}"
-    -t "${CI_REGISTRY_IMAGE}:latest"
-    .
-  only:
-  - tags
+  - |
+    if [ -n "${CI_COMMIT_TAG}" ]; then
+      TAGS="-t ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME} -t ${CI_REGISTRY_IMAGE}:latest"
+    elif [ "${CI_COMMIT_BRANCH}" = "master" ]; then
+      TAGS="-t ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}"
+    elif echo "${CI_COMMIT_BRANCH}" | grep -qE '^[0-9]+-'; then
+      TAGS="-t ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME%%-*}"
+    else
+      TAGS="-t ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME:0:128}"
+    fi
+    docker buildx build \
+      --provenance=false \
+      --pull \
+      --build-arg BUILD_NAME="${CI_PROJECT_NAME}" \
+      --build-arg BUILD_DATE="$(date '+%FT%T.%s%z')" \
+      --build-arg BUILD_VCSREF="${CI_COMMIT_SHA:0:8}" \
+      --platform=linux/arm64,linux/amd64,linux/arm/v7 \
+      --push \
+      $TAGS \
+      .
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == "master"
+    - if: $CI_COMMIT_BRANCH =~ /^[0-9]+-.*$/
+    - if: $CI_COMMIT_BRANCH == "dev"
+      when: never
+    - if: $CI_COMMIT_BRANCH =~ /^[a-zA-Z]+.*$/
