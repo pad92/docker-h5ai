@@ -17,10 +17,10 @@ test_image:
     - apk add --no-cache curl
   script:
     - docker build -t h5ai-local:latest .
-    - CONTAINER_ID=$(cat /proc/self/cgroup /proc/self/mountinfo 2>/dev/null | grep -o -E '[0-9a-f]{64}' | head -n 1)
+    - CONTAINER_ID=$(awk 'match($0, /[0-9a-f]{64}/) {print substr($0, RSTART, RLENGTH); exit}' /proc/self/cgroup /proc/self/mountinfo 2>/dev/null)
     - if [ -z "$CONTAINER_ID" ]; then CONTAINER_ID=$(hostname); fi
     - echo "Using container ID $CONTAINER_ID"
-    - NET_NAME=$(docker inspect "$CONTAINER_ID" --format='{{range $net, $v := .NetworkSettings.Networks}}{{$net}}{{"\n"}}{{end}}' 2>/dev/null | head -n 1)
+    - NET_NAME=$(docker inspect "$CONTAINER_ID" --format='{{range $net, $v := .NetworkSettings.Networks}}{{$net}}{{"\n"}}{{end}}' 2>/dev/null | awk '{print; exit}')
     - if [ -z "$NET_NAME" ]; then NET_NAME="bridge"; fi
     - echo "Job container is running on network $NET_NAME"
     - |
