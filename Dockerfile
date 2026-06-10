@@ -20,18 +20,6 @@ FROM nginx:1.26-alpine-slim
 
 ARG H5AI_VERSION
 ENV H5AI_VERSION=${H5AI_VERSION}
-ARG BUILD_DATE
-ARG BUILD_VCSREF
-
-LABEL maintainer="pad92" \
-      org.label-schema.url="https://github.com/pad92/docker-h5ai/blob/master/README.md" \
-      org.label-schema.build-date=$BUILD_DATE \
-      org.label-schema.version=$H5AI_VERSION \
-      org.label-schema.vcs-url="https://github.com/pad92/docker-h5ai.git" \
-      org.label-schema.vcs-ref=$BUILD_VCSREF \
-      org.label-schema.docker.dockerfile="/Dockerfile" \
-      org.label-schema.description="h5ai on alpine docker image" \
-      org.label-schema.schema-version="1.0"
 
 RUN apk update && apk upgrade --no-cache && apk add --no-cache \
     apache2-utils \
@@ -66,6 +54,19 @@ RUN ln -sf /dev/stderr /var/log/php83/error.log \
  && ln -sf /dev/stderr /var/log/nginx/error.log \
  && chown nginx:www-data /usr/share/h5ai/_h5ai/public/cache/ \
  && chown nginx:www-data /usr/share/h5ai/_h5ai/private/cache/
+
+ARG BUILD_DATE
+ARG BUILD_VCSREF
+
+LABEL maintainer="pad92" \
+      org.label-schema.url="https://github.com/pad92/docker-h5ai/blob/master/README.md" \
+      org.label-schema.build-date=$BUILD_DATE \
+      org.label-schema.version=$H5AI_VERSION \
+      org.label-schema.vcs-url="https://github.com/pad92/docker-h5ai.git" \
+      org.label-schema.vcs-ref=$BUILD_VCSREF \
+      org.label-schema.docker.dockerfile="/Dockerfile" \
+      org.label-schema.description="h5ai on alpine docker image" \
+      org.label-schema.schema-version="1.0"
 
 EXPOSE 80
 
