@@ -26,7 +26,7 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          platforms: linux/amd64,linux/arm64
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Set build variables
@@ -63,7 +63,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.tags.outputs.tags }}
           push: ${{ env.DOCKERHUB_PASSWORD != '' }}
           build-args: |
