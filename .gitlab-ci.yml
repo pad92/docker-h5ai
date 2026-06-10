@@ -17,12 +17,13 @@ test_image:
     - apk add --no-cache curl
   script:
     - docker build -t h5ai-local:latest .
+    - CONTAINER_ID=$(cat /proc/self/cgroup /proc/self/mountinfo 2>/dev/null | grep -o -E '[0-9a-f]{64}' | head -n 1)
+    - if [ -z "$CONTAINER_ID" ]; then CONTAINER_ID=$(hostname); fi
+    - echo "Using container ID $CONTAINER_ID"
+    - NET_NAME=$(docker inspect "$CONTAINER_ID" --format='{{range $net, $v := .NetworkSettings.Networks}}{{$net}}{{"\n"}}{{end}}' 2>/dev/null | head -n 1)
+    - if [ -z "$NET_NAME" ]; then NET_NAME="bridge"; fi
+    - echo "Job container is running on network $NET_NAME"
     - |
-      # Detect the network of the current job container (using first line in case of multiple networks)
-      NET_NAME=$(docker inspect $(hostname) --format='{{range $net, $v := .NetworkSettings.Networks}}{{$net}}{{"\n"}}{{end}}' 2>/dev/null | head -n 1)
-      if [ -z "$NET_NAME" ]; then NET_NAME="bridge"; fi
-      echo "Job container is running on network: $NET_NAME"
-
       # 2. Test without authentication
       echo "Testing container without authentication..."
       if [ "$NET_NAME" = "bridge" ]; then
@@ -48,7 +49,7 @@ test_image:
         exit 1
       fi
       docker rm -f h5ai-test-noauth
-
+    - |
       # 3. Test with basic authentication
       echo "Testing container with basic authentication..."
       if [ "$NET_NAME" = "bridge" ]; then
