@@ -44,7 +44,7 @@ jobs:
           if [ "$IS_TAG" = "true" ]; then
             TAGS="${IMAGE}:${REF_NAME},${IMAGE}:latest"
           elif [ "$REF_NAME" = "master" ]; then
-            TAGS="${IMAGE}:${REF_NAME}"
+            TAGS="${IMAGE}:${REF_NAME},${IMAGE}:latest"
           elif echo "$REF_NAME" | grep -qE '^[0-9]+-'; then
             TAGS="${IMAGE}:${REF_NAME%%-*}"
           else
