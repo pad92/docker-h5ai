@@ -39,7 +39,7 @@ jobs:
         run: |
           REF_NAME="${{ github.ref_name }}"
           IS_TAG="${{ startsWith(github.ref, 'refs/tags/') }}"
-          IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/h5ai"
+          IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/docker-h5ai"
           
           if [ "$IS_TAG" = "true" ]; then
             TAGS="${IMAGE}:${REF_NAME},${IMAGE}:latest"
