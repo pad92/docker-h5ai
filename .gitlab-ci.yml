@@ -3,6 +3,10 @@ image: docker:git
 services:
 - docker:dind
 
+default:
+  tags:
+    - chataigne
+
 stages:
 - test
 - build_image
