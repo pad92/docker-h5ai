@@ -18,16 +18,25 @@ test_image:
   script:
     - docker build -t h5ai-local:latest .
     - |
-      # 1. Resolve the host gateway IP to communicate with mapped port 8890
-      TEST_HOST=$(docker inspect $(hostname) --format='{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}' 2>/dev/null || ip route show | awk '/default/ {print $3}' 2>/dev/null || echo "localhost")
-      if [ -z "$TEST_HOST" ]; then TEST_HOST="localhost"; fi
-      echo "TEST_HOST is set to: $TEST_HOST"
+      # Detect the network of the current job container
+      NET_NAME=$(docker inspect $(hostname) --format='{{range $net, $v := .NetworkSettings.Networks}}{{$net}}{{end}}' 2>/dev/null)
+      if [ -z "$NET_NAME" ]; then NET_NAME="bridge"; fi
+      echo "Job container is running on network: $NET_NAME"
 
       # 2. Test without authentication
       echo "Testing container without authentication..."
-      docker run -d --name h5ai-test-noauth -p 8890:80 -v "$(pwd)":/share:ro h5ai-local:latest
-      sleep 3
-      if curl -s -I "http://${TEST_HOST}:8890/" | grep -q "HTTP/1.1 200 OK"; then
+      if [ "$NET_NAME" = "bridge" ]; then
+        docker run -d --name h5ai-test-noauth -v "$(pwd)":/share:ro h5ai-local:latest
+        sleep 3
+        TEST_HOST=$(docker inspect h5ai-test-noauth --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
+      else
+        docker run -d --name h5ai-test-noauth --network="$NET_NAME" -v "$(pwd)":/share:ro h5ai-local:latest
+        sleep 3
+        TEST_HOST="h5ai-test-noauth"
+      fi
+      
+      echo "Connecting to test container at http://${TEST_HOST}:80/"
+      if curl -s -I "http://${TEST_HOST}:80/" | grep -q "HTTP/1.1 200 OK"; then
         echo "✓ Public index page returned 200 OK"
       else
         echo "✗ Public index page test failed"
@@ -38,16 +47,26 @@ test_image:
 
       # 3. Test with basic authentication
       echo "Testing container with basic authentication..."
-      docker run -d --name h5ai-test-auth -p 8890:80 -e ENV_U=admin -e ENV_P=secret -v "$(pwd)":/share:ro h5ai-local:latest
-      sleep 3
-      if curl -s -I "http://${TEST_HOST}:8890/" | grep -q "HTTP/1.1 401 Unauthorized"; then
+      if [ "$NET_NAME" = "bridge" ]; then
+        docker run -d --name h5ai-test-auth -e ENV_U=admin -e ENV_P=secret -v "$(pwd)":/share:ro h5ai-local:latest
+        sleep 3
+        TEST_HOST=$(docker inspect h5ai-test-auth --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
+      else
+        docker run -d --name h5ai-test-auth --network="$NET_NAME" -e ENV_U=admin -e ENV_P=secret -v "$(pwd)":/share:ro h5ai-local:latest
+        sleep 3
+        TEST_HOST="h5ai-test-auth"
+      fi
+      
+      echo "Connecting to auth container at http://${TEST_HOST}:80/"
+      if curl -s -I "http://${TEST_HOST}:80/" | grep -q "HTTP/1.1 401 Unauthorized"; then
         echo "✓ Unauthenticated request correctly blocked (401 Unauthorized)"
       else
         echo "✗ Unauthenticated request test failed (did not return 401)"
         docker rm -f h5ai-test-auth
         exit 1
       fi
-      if curl -s -I -u admin:secret "http://${TEST_HOST}:8890/" | grep -q "HTTP/1.1 200 OK"; then
+      
+      if curl -s -I -u admin:secret "http://${TEST_HOST}:80/" | grep -q "HTTP/1.1 200 OK"; then
         echo "✓ Authenticated request successfully bypassed basic auth"
       else
         echo "✗ Authenticated request test failed (rejected credentials)"
