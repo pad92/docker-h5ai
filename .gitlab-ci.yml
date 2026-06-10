@@ -1,7 +1,11 @@
 image: docker:git
 
 variables:
-  DOCKER_HOST: unix:///var/run/docker.sock
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+
+services:
+  - docker:dind
 
 default:
   tags:
@@ -14,14 +18,53 @@ stages:
 test_image:
   stage: test
   before_script:
-    - apk add --no-cache make curl
+    - apk add --no-cache curl
   script:
-    - make build
+    - docker build -t h5ai-local:latest .
+
+    - echo "Testing container without authentication..."
+    - docker run -d --name h5ai-test-noauth -p 8890:80 -v "$(pwd)":/share:ro h5ai-local:latest
+    - sleep 3
     - |
-      TEST_HOST=$(docker inspect $(hostname) --format='{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}' 2>/dev/null || ip route show | awk '/default/ {print $3}' 2>/dev/null || echo "localhost")
-      if [ -z "$TEST_HOST" ]; then TEST_HOST="localhost"; fi
-      make test TEST_HOST="$TEST_HOST"
-    - make trivy
+      if curl -s -I http://docker:8890/ | grep -q "HTTP/1.1 200 OK"; then
+        echo "✓ Public index page returned 200 OK"
+      else
+        echo "✗ Public index page test failed"
+        docker rm -f h5ai-test-noauth
+        exit 1
+      fi
+    - docker rm -f h5ai-test-noauth
+
+    - echo "Testing container with basic authentication..."
+    - docker run -d --name h5ai-test-auth -p 8890:80 -e ENV_U=admin -e ENV_P=secret -v "$(pwd)":/share:ro h5ai-local:latest
+    - sleep 3
+    - |
+      if curl -s -I http://docker:8890/ | grep -q "HTTP/1.1 401 Unauthorized"; then
+        echo "✓ Unauthenticated request correctly blocked (401 Unauthorized)"
+      else
+        echo "✗ Unauthenticated request test failed (did not return 401)"
+        docker rm -f h5ai-test-auth
+        exit 1
+      fi
+    - |
+      if curl -s -I -u admin:secret http://docker:8890/ | grep -q "HTTP/1.1 200 OK"; then
+        echo "✓ Authenticated request successfully bypassed basic auth"
+      else
+        echo "✗ Authenticated request test failed (rejected credentials)"
+        docker rm -f h5ai-test-auth
+        exit 1
+      fi
+    - docker rm -f h5ai-test-auth
+    - echo "All functional tests passed successfully!"
+
+    - echo "Running Trivy scan..."
+    - |
+      docker run --rm \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        -v "${HOME}/.cache":/root/.cache \
+        aquasec/trivy:latest image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed h5ai-local:latest
+  after_script:
+    - docker rm -f h5ai-test-noauth h5ai-test-auth 2>/dev/null || true
 
 push_image:
   stage: push
