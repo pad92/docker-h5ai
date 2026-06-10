@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [0.30.0-5] - Upcoming Release
 ### Changed
 - **CI/CD Optimization**: Configured build caching (`cache-from`/`cache-to` with `type=gha`) in the GitHub Actions workflow to speed up compilation.
-- **CI/CD Security Scanner**: Resolved local scanning image availability in GitHub Actions by adding `load: true` to the scanner stage.
+- **CI/CD Security Scanner**: Resolved local scanning image availability in GitHub Actions by adding `load: true` to the scanner stage, and upgraded `aquasecurity/trivy-action` to `v0.35.0` to avoid resolution issues with deleted upstream tags.
 - **GitLab CI Cleanups**: Simplified GitLab CI pipeline by reordering stages (running test/vulnerability scanning before building production images) and consolidating the four redundant build jobs into a single parameterized `build_image` job.
 - **Warnings Fix**: Declared missing global and stage-specific `ARG` inputs (`BUILD_DATE`, `BUILD_VCSREF`, `H5AI_VERSION`) in `Dockerfile` to fix warnings about undefined label variables.
 - **Makefile Improvements**: Declared build target dependencies for `test` and `trivy` targets to automate image compilation.
