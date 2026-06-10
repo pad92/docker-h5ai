@@ -18,8 +18,8 @@ test_image:
   script:
     - docker build -t h5ai-local:latest .
     - |
-      # Detect the network of the current job container
-      NET_NAME=$(docker inspect $(hostname) --format='{{range $net, $v := .NetworkSettings.Networks}}{{$net}}{{end}}' 2>/dev/null)
+      # Detect the network of the current job container (using first line in case of multiple networks)
+      NET_NAME=$(docker inspect $(hostname) --format='{{range $net, $v := .NetworkSettings.Networks}}{{$net}}{{"\n"}}{{end}}' 2>/dev/null | head -n 1)
       if [ -z "$NET_NAME" ]; then NET_NAME="bridge"; fi
       echo "Job container is running on network: $NET_NAME"
 
@@ -40,6 +40,10 @@ test_image:
         echo "✓ Public index page returned 200 OK"
       else
         echo "✗ Public index page test failed"
+        echo "=== HTTP Headers ==="
+        curl -i "http://${TEST_HOST}:80/" || true
+        echo "=== Container Logs ==="
+        docker logs h5ai-test-noauth || true
         docker rm -f h5ai-test-noauth
         exit 1
       fi
@@ -62,6 +66,10 @@ test_image:
         echo "✓ Unauthenticated request correctly blocked (401 Unauthorized)"
       else
         echo "✗ Unauthenticated request test failed (did not return 401)"
+        echo "=== HTTP Headers ==="
+        curl -i "http://${TEST_HOST}:80/" || true
+        echo "=== Container Logs ==="
+        docker logs h5ai-test-auth || true
         docker rm -f h5ai-test-auth
         exit 1
       fi
@@ -70,6 +78,10 @@ test_image:
         echo "✓ Authenticated request successfully bypassed basic auth"
       else
         echo "✗ Authenticated request test failed (rejected credentials)"
+        echo "=== HTTP Headers ==="
+        curl -i -u admin:secret "http://${TEST_HOST}:80/" || true
+        echo "=== Container Logs ==="
+        docker logs h5ai-test-auth || true
         docker rm -f h5ai-test-auth
         exit 1
       fi
