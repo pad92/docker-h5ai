@@ -85,7 +85,6 @@ jobs:
             type=semver,pattern={{major}}
             type=ref,event=tag
             type=ref,event=branch
-            type=sha,prefix=sha-,format=short
 
       - name: Set up QEMU
         run: |
