@@ -53,7 +53,9 @@ jobs:
 
       - name: Run Integration Tests
         run: |
-          make test IMAGE_NAME=h5ai-local TAG=latest
+          TEST_HOST=$(docker inspect $(hostname) --format='{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}' 2>/dev/null || ip route show | awk '/default/ {print $3}' 2>/dev/null || echo "localhost")
+          if [ -z "$TEST_HOST" ]; then TEST_HOST="localhost"; fi
+          make test IMAGE_NAME=h5ai-local TAG=latest TEST_HOST="$TEST_HOST"
 
       - name: Run Trivy Vulnerability Scan
         uses: aquasecurity/trivy-action@v0.35.0
