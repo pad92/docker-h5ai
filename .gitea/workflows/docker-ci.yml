@@ -50,8 +50,6 @@ jobs:
           context: .
           load: true
           tags: h5ai-local:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Run Integration Tests
         run: |
@@ -132,5 +130,3 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
