@@ -5,7 +5,7 @@ on:
     branches:
       - main
     tags:
-      - 'v*'
+      - '*'
   pull_request:
     branches:
       - main
@@ -83,6 +83,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
+            type=ref,event=tag
             type=ref,event=branch
             type=sha,prefix=sha-,format=short
 
