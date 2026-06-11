@@ -58,14 +58,8 @@ jobs:
           make test IMAGE_NAME=h5ai-local TAG=latest TEST_HOST="$TEST_HOST"
 
       - name: Run Trivy Vulnerability Scan
-        uses: aquasecurity/trivy-action@v0.35.0
-        with:
-          image-ref: 'h5ai-local:latest'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
+        run: |
+          make trivy IMAGE_NAME=h5ai-local TAG=latest
 
   # Job 3: Build multi-platform image and push to registries
   publish:
