@@ -59,7 +59,7 @@ ARG BUILD_DATE
 ARG BUILD_VCSREF
 
 LABEL maintainer="pad92" \
-      org.label-schema.url="https://github.com/pad92/docker-h5ai/blob/master/README.md" \
+      org.label-schema.url="https://github.com/pad92/docker-h5ai/blob/main/README.md" \
       org.label-schema.build-date=$BUILD_DATE \
       org.label-schema.version=$H5AI_VERSION \
       org.label-schema.vcs-url="https://github.com/pad92/docker-h5ai.git" \
