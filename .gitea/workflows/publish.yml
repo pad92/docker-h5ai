@@ -1,4 +1,4 @@
-name: Docker Build & Push CI
+name: Publish Docker Image
 
 on:
   push:
@@ -6,9 +6,6 @@ on:
       - main
     tags:
       - 'v*'
-  pull_request:
-    branches:
-      - main
 
 permissions:
   contents: read
@@ -66,8 +63,6 @@ jobs:
     name: Build & Publish Image
     needs: [lint, test]
     runs-on: ubuntu-latest
-    # Only push on branch pushes or git tags (not on PRs)
-    if: github.event_name != 'pull_request'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

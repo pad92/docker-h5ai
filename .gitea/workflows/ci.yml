@@ -1,0 +1,58 @@
+name: CI (Lint & Test)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+env:
+  GIT_SSL_NO_VERIFY: "true"
+
+jobs:
+  # Job 1: Lint the Dockerfile to enforce best practices
+  lint:
+    name: Lint Dockerfile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: error
+
+  # Job 2: Build the image locally and run tests
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build local image for testing
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: h5ai-local:latest
+
+      - name: Run Integration Tests
+        run: |
+          TEST_HOST=$(docker inspect $(hostname) --format='{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}' 2>/dev/null || ip route show | awk '/default/ {print $3}' 2>/dev/null || echo "localhost")
+          if [ -z "$TEST_HOST" ]; then TEST_HOST="localhost"; fi
+          make test IMAGE_NAME=h5ai-local TAG=latest TEST_HOST="$TEST_HOST"
+
+      - name: Run Trivy Vulnerability Scan
+        run: |
+          make trivy IMAGE_NAME=h5ai-local TAG=latest
