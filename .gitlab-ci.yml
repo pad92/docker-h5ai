@@ -4,6 +4,7 @@ stages:
   - test
   - scan
   - publish
+  - release
 
 default:
   tags:
@@ -142,8 +143,8 @@ publish:
         add_tags "$CI_COMMIT_TAG"
         add_tags "latest"
         
-        # If the tag is a semver tag (like v1.2.3 or 1.2.3), also generate semver tags
-        if echo "$CI_COMMIT_TAG" | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' > /dev/null; then
+        # If the tag is a semver tag (like v1.2.3, 1.2.3, or 0.30.0-5), also generate semver tags
+        if echo "$CI_COMMIT_TAG" | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+(-.*)?$' > /dev/null; then
           SEMVER=$(echo "$CI_COMMIT_TAG" | sed 's/^v//')
           MAJOR=$(echo "$SEMVER" | cut -d. -f1)
           MINOR=$(echo "$SEMVER" | cut -d. -f2)
@@ -170,3 +171,36 @@ publish:
         --cache-from "type=registry,ref=$GL_IMAGE:cache" \
         --cache-to "type=registry,ref=$GL_IMAGE:cache,mode=max" \
         .
+
+create_release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - |
+      # Extract the version notes from CHANGELOG.md
+      # We look for the section starting with ## [X.Y.Z] and end at the next ##
+      # We use a temporary file to store the notes because the release-cli
+      # description might be large and we want to avoid shell argument limits.
+
+      VERSION=$CI_COMMIT_TAG
+      CLEAN_VERSION=$(echo "$VERSION" | sed 's/^v//')
+      echo "Extracting notes for $CLEAN_VERSION (from tag $VERSION)..."
+
+      # Use sed to extract from the line containing the version header until the next header
+      sed -n "/## \[$CLEAN_VERSION\]/,/## \[/p" CHANGELOG.md > release_notes.txt
+
+      # Remove the last line (which is the start of the next version) if it exists
+      # and remove the first line (the header itself)
+      sed -i '1d' release_notes.txt
+      # Remove the last line if it matches the start of another version header
+      sed -i '$d' release_notes.txt
+
+      # If the file is empty, provide a default message
+      if [ ! -s release_notes.txt ]; then
+        echo "No specific notes found in CHANGELOG.md for $VERSION." > release_notes.txt
+      fi
+
+      # Create the release using release-cli
+      release-cli create --name "$VERSION" --description "$(cat release_notes.txt)"

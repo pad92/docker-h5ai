@@ -3,12 +3,24 @@
 All notable changes to this project will be documented in this file.
 
 ## [0.30.0-5] - Upcoming Release
+### Added
+- **GitLab Release Automation**: Configured `release-cli` in the CI/CD pipeline to automatically generate GitLab Release pages from tag descriptions in `CHANGELOG.md`.
+- **Security Headers**: Enabled `X-Frame-Options`, `X-Content-Type-Options`, and `X-XSS-Protection` headers in the Nginx configuration.
+- **Access Control**: Explicitly blocked external access to the `/_h5ai/private` directory with a 403 Forbidden rule.
+
 ### Changed
-- **CI/CD Optimization**: Configured build caching (`cache-from`/`cache-to` with `type=gha`) in the GitHub Actions workflow to speed up compilation.
-- **CI/CD Security Scanner**: Resolved local scanning image availability in GitHub Actions by adding `load: true` to the scanner stage, and upgraded `aquasecurity/trivy-action` to `v0.35.0` to avoid resolution issues with deleted upstream tags.
-- **GitLab CI Cleanups**: Simplified GitLab CI pipeline by reordering stages (running test/vulnerability scanning before building production images) and consolidating the four redundant build jobs into a single parameterized `build_image` job. Corrected host resolution in the test runner container by using DinD hostname configuration (`TEST_HOST=docker`).
-- **Warnings Fix**: Declared missing global and stage-specific `ARG` inputs (`BUILD_DATE`, `BUILD_VCSREF`, `H5AI_VERSION`) in `Dockerfile` to fix warnings about undefined label variables.
-- **Makefile Improvements**: Declared build target dependencies for `test` and `trivy` targets to automate image compilation. Parameterized the target host (`TEST_HOST`) to support both local development (`localhost`) and DinD (`docker`).
+- **Stack Upgrade**: Upgraded base image to Nginx 1.26 (Alpine-slim) and PHP to version 8.3 (upgraded from PHP 8.1), including path updates and packages optimization.
+- **Node.js Build Environment**: Upgraded builder environment to Node 20 (Alpine) and enabled openssl legacy provider to compile dependencies.
+- **Process Manager**: Changed Supervisord config to automatically restart (`autorestart=true`) PHP-FPM and Nginx processes on failure.
+- **UNIX Signal Handling**: Added `exec` command to start Nginx to ensure proper signal forwarding and graceful container shutdowns.
+- **GitLab CI Migration**: Migrated the pipeline from GitHub Actions to GitLab CI/CD, configuring a 5-stage workflow (lint, build, test, scan, publish) run on the `chataigne` runner.
+- **CI/CD Build & Caching**: Replaced multiple build jobs with a parameterized, single-build pattern. Configured multi-platform compilation (`linux/amd64`, `linux/arm64`) using Docker Buildx and registry caching (`type=registry`) to speed up builds.
+- **CI/CD Security Scanner**: Upgraded Trivy vulnerability scanning tool to scan built image tarballs locally, removing the need for a Docker daemon in the scan stage.
+- **Dockerfile & Makefile Cleanups**: Standardized Dockerfile label inputs (`BUILD_DATE`, `BUILD_VCSREF`) and parameterized the target hostname (`TEST_HOST`) to ease local validation.
+
+### Fixed
+- **Basic Authentication scope**: Extended authentication protection to cover both the indexing layout page and direct static file downloads by moving the authentication config to the root block. Added safe checks to only enable authentication if both `ENV_U` and `ENV_P` variables are non-empty.
+- **Functional Validation**: Rewrote authentication test scripts to resolve test runner gateways by dynamically querying internal container IP addresses on the bridge network.
 
 ## [0.30.0-4] - 2023-10-10
 ### Fixed
