@@ -59,10 +59,17 @@ test:
     - docker load -i image.tar
     - echo "Testing container without authentication..."
     - docker run -d --name h5ai-test-noauth -v "$CI_PROJECT_DIR:/share:ro" h5ai-local:latest
-    - sleep 3
     - TEST_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' h5ai-test-noauth)
     - |
-      if curl -s -I "http://${TEST_IP}/" | grep -q "HTTP/1.1 200 OK"; then
+      SUCCESS=false
+      for i in $(seq 1 15); do
+        if curl -s -I "http://${TEST_IP}/" | grep -q "HTTP/1.1 200 OK"; then
+          SUCCESS=true
+          break
+        fi
+        sleep 1
+      done
+      if [ "$SUCCESS" = "true" ]; then
         echo "✓ Public index page returned 200 OK"
       else
         echo "✗ Public index page test failed"
@@ -73,10 +80,17 @@ test:
 
     - echo "Testing container with basic authentication..."
     - docker run -d --name h5ai-test-auth -e ENV_U=admin -e ENV_P=secret -v "$CI_PROJECT_DIR:/share:ro" h5ai-local:latest
-    - sleep 3
     - TEST_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' h5ai-test-auth)
     - |
-      if curl -s -I "http://${TEST_IP}/" | grep -q "HTTP/1.1 401 Unauthorized"; then
+      SUCCESS=false
+      for i in $(seq 1 15); do
+        if curl -s -I "http://${TEST_IP}/" | grep -q "HTTP/1.1 401 Unauthorized"; then
+          SUCCESS=true
+          break
+        fi
+        sleep 1
+      done
+      if [ "$SUCCESS" = "true" ]; then
         echo "✓ Unauthenticated request correctly blocked (401 Unauthorized)"
       else
         echo "✗ Unauthenticated request test failed (did not return 401)"
@@ -84,10 +98,18 @@ test:
         exit 1
       fi
     - |
-      if curl -s -I -u admin:secret "http://${TEST_IP}/" | grep -q "HTTP/1.1 200 OK"; then
+      SUCCESS=false
+      for i in $(seq 1 15); do
+        if curl -s -I -u admin:secret "http://${TEST_IP}/" | grep -q "HTTP/1.1 200 OK"; then
+          SUCCESS=true
+          break
+        fi
+        sleep 1
+      done
+      if [ "$SUCCESS" = "true" ]; then
         echo "✓ Authenticated request successfully bypassed basic auth"
       else
-        echo "✗ Authenticated request test failed (rejected credentials)"
+        echo "✗ Authenticated request test failed (rejected credentials or PHP-FPM not ready)"
         docker rm -f h5ai-test-auth
         exit 1
       fi
