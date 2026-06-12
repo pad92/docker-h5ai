@@ -1,11 +1,35 @@
+diff --git a/class-setup.php b/class-setup.php
+index cbb85f85..fdc8df0d 100644
 --- a/class-setup.php
 +++ b/class-setup.php
-@@ -97,7 +97,7 @@ class Setup {
+@@ -99,7 +99,7 @@ class Setup {
          $this->set('H5AI_PATH', Util::normalize_path(dirname(dirname(dirname(dirname(__FILE__)))), false));
-
+ 
          $this->set('ROOT_HREF', Util::normalize_path(dirname($this->get('H5AI_HREF')), true));
 -        $this->set('ROOT_PATH', Util::normalize_path(dirname($this->get('H5AI_PATH')), false));
 +        $this->set('ROOT_PATH', "/share");
-
+ 
          $this->set('PUBLIC_HREF', Util::normalize_path($this->get('H5AI_HREF') . '/public/', true));
          $this->set('PUBLIC_PATH', Util::normalize_path($this->get('H5AI_PATH') . '/public/', false));
+@@ -120,9 +120,9 @@ class Setup {
+ 
+         $cmds = Json::load($cmds_cache_path);
+         if (sizeof($cmds) === 0 || $this->refresh) {
+-            $cmds['command'] = Util::exec_0('command -v command');
+-            $cmds['which'] = Util::exec_0('which which') || Util::exec_0('which which.exe');
+-            $cmds['where'] = Util::exec_0('where where.exe');
++            $cmds['command'] = Util::exec_0('command -v command 2>/dev/null');
++            $cmds['which'] = Util::exec_0('which which 2>/dev/null');
++            $cmds['where'] = false;
+ 
+             $cmd = false;
+             if ($cmds['command']) {
+@@ -134,7 +134,7 @@ class Setup {
+             }
+ 
+             foreach (['avconv', 'convert', 'du', 'ffmpeg', 'gm', 'tar', 'zip'] as $c) {
+-                $cmds[$c] = ($cmd !== false) && (Util::exec_0($cmd . ' ' . $c) || Util::exec_0($cmd . ' ' . $c . '.exe'));
++                $cmds[$c] = ($cmd !== false) && Util::exec_0($cmd . ' ' . $c . ' 2>/dev/null');
+             }
+ 
+             Json::save($cmds_cache_path, $cmds);
