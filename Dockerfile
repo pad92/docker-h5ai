@@ -1,4 +1,4 @@
-ARG H5AI_VERSION=0.30.0-pad92.1
+ARG H5AI_VERSION=0.30.0-pad92.2
 
 FROM node:20-alpine AS builder
 
@@ -10,7 +10,7 @@ RUN apk add --no-cache git patch \
     && cd h5ai \
     && git checkout -b ${H5AI_VERSION} tags/v${H5AI_VERSION} \
     && npm install \
-    && NODE_OPTIONS=--openssl-legacy-provider npm run build
+    && npm run build
 
 COPY class-setup.php.patch /class-setup.php.patch
 RUN patch -p1 -u -d /h5ai/build/_h5ai/private/php/core/ -i /class-setup.php.patch \

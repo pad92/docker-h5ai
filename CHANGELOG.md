@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.30.0-7] - 2026-06-12
+### Added
+- **Resource Limits**: Configured CPU limits (`cpus: '1.0'`) and memory limits (`memory: 1G`) with reservations in `docker-compose.yml`.
+- **PHP Custom Configuration**: Added `custom.ini` with custom memory limits (`memory_limit = 512M`), execution time (`max_execution_time = 120`), and optimised realpath cache and output buffering.
+
+### Changed
+- **h5ai Base Upgrade**: Upgraded built h5ai base version to `0.30.0-pad92.2`.
+- **PHP-FPM Tuning**: Tuned pool concurrency (up to 20 workers) and process recycling after 1000 requests to avoid memory leaks.
+- **OPcache Tuning**: Enabled optimized OPcache parameters and disabled file status checks (`validate_timestamps = 0`) since the image filesystem is immutable.
+- **Docker Compose Cleanup**: Removed obsolete version parameter and adjusted volume structure.
+
 ## [0.30.0-6] - 2026-06-12
 ### Added
 - **Persistent Cache Documentation**: Added instructions in `README.md` to persist public (thumbnails) and private cache across container restarts via volume mounts.
