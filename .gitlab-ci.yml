@@ -113,8 +113,8 @@ publish:
     # Log in to Docker Hub and compile tags/run build in a single shell block
     - |
       DOCKERHUB_LOGGED_IN=""
-      if [ -n "$DOCKERHUB_USER" ] && [ -n "$DOCKERHUB_PASSWORD" ]; then
-        if echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USER" --password-stdin docker.io; then
+      if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_PASSWORD" ]; then
+        if echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin docker.io; then
           DOCKERHUB_LOGGED_IN="true"
         else
           echo "Warning: Docker Hub login failed!"
@@ -145,12 +145,15 @@ publish:
         # If the tag is a semver tag (like v1.2.3, 1.2.3, or 0.30.0-5), also generate semver tags
         if echo "$CI_COMMIT_TAG" | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+(-.*)?$' > /dev/null; then
           SEMVER=$(echo "$CI_COMMIT_TAG" | sed 's/^v//')
-          MAJOR=$(echo "$SEMVER" | cut -d. -f1)
-          MINOR=$(echo "$SEMVER" | cut -d. -f2)
-          PATCH=$(echo "$SEMVER" | cut -d. -f3)
           add_tags "$SEMVER"
-          add_tags "$MAJOR.$MINOR"
-          add_tags "$MAJOR"
+          
+          # Only generate major/minor tags for clean semver releases (no pre-release/revision suffix)
+          if echo "$SEMVER" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' > /dev/null; then
+            MAJOR=$(echo "$SEMVER" | cut -d. -f1)
+            MINOR=$(echo "$SEMVER" | cut -d. -f2)
+            add_tags "$MAJOR.$MINOR"
+            add_tags "$MAJOR"
+          fi
         fi
       elif [ "$CI_COMMIT_BRANCH" = "main" ] ; then
         # When pushed to main branch:
