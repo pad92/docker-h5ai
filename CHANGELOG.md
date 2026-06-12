@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.30.0-8] - 2026-06-12
+### Changed
+- **h5ai Base Upgrade**: Upgraded built h5ai base version to `0.30.0-pad92.3`.
+
 ## [0.30.0-7] - 2026-06-12
 ### Added
 - **Resource Limits**: Configured CPU limits (`cpus: '1.0'`) and memory limits (`memory: 1G`) with reservations in `docker-compose.yml`.
