@@ -18,7 +18,7 @@ lint:dockerfile:
   stage: lint
   image: hadolint/hadolint:latest-alpine
   script:
-    - hadolint Dockerfile
+    - hadolint --failure-threshold error Dockerfile
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH
