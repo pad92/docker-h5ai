@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.30.0-9] - 2026-06-12
+### Added
+- **Automatic Cache Permissions**: Added a Supervisor initialization task (`init_perms.sh`) to automatically set the correct ownership (`nginx:www-data`) and write permissions (`755`) on cache directories at startup.
+
 ## [0.30.0-8] - 2026-06-12
 ### Changed
 - **h5ai Base Upgrade**: Upgraded built h5ai base version to `0.30.0-pad92.3`.

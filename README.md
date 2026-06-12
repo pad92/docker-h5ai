@@ -71,6 +71,10 @@ docker container run -d -p 80:80 \
   pad92/docker-h5ai
 ```
 
+> [!NOTE]
+> Upon container startup, a Supervisor initialization task automatically ensures that the cache directories have the correct ownership (`nginx:www-data`) and permissions (`755`) so that the PHP process can write to them.
+
+
 ---
 
 ## Docker Compose Example

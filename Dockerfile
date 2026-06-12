@@ -52,6 +52,7 @@ COPY slash/     /
 RUN ln -sf /dev/stderr /var/log/php83/error.log \
     && ln -sf /dev/stdout /var/log/nginx/access.log \
     && ln -sf /dev/stderr /var/log/nginx/error.log \
+    && chmod +x /usr/local/bin/nginx_auth.sh /usr/local/bin/init_perms.sh \
     && chown nginx:www-data /usr/share/h5ai/_h5ai/public/cache/ \
     && chown nginx:www-data /usr/share/h5ai/_h5ai/private/cache/
 
