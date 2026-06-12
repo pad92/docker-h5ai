@@ -54,6 +54,23 @@ docker container run -d -p 80:80 \
   pad92/docker-h5ai
 ```
 
+### Cache Paths (Thumbnails & Metadata)
+
+The application caches generated thumbnails and metadata in the following paths within the container:
+
+- **Public Cache (Thumbnails cache)**: `/usr/share/h5ai/_h5ai/public/cache/`
+- **Private Cache**: `/usr/share/h5ai/_h5ai/private/cache/`
+
+To persist these thumbnails across container restarts or recreations, mount volumes to these paths:
+
+```bash
+docker container run -d -p 80:80 \
+  -v /path/to/sharing-file:/share \
+  -v /path/to/public-cache:/usr/share/h5ai/_h5ai/public/cache \
+  -v /path/to/private-cache:/usr/share/h5ai/_h5ai/private/cache \
+  pad92/docker-h5ai
+```
+
 ---
 
 ## Docker Compose Example
