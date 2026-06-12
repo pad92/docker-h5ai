@@ -27,7 +27,19 @@ build:
   stage: build
   image: docker:24.0.5
   script:
-    - docker build --pull -t h5ai-local:latest .
+    # Set up QEMU for multi-platform build compatibility
+    - docker run --privileged --rm tonistiigi/binfmt --install all || true
+    - docker buildx create --use
+    # Log in to GitLab Container Registry to push cache
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    # Build local single-platform image and push build cache
+    - |
+      docker buildx build \
+        --load \
+        -t h5ai-local:latest \
+        --cache-from "type=registry,ref=$CI_REGISTRY_IMAGE:cache" \
+        --cache-to "type=registry,ref=$CI_REGISTRY_IMAGE:cache,mode=max" \
+        .
     - docker save -o image.tar h5ai-local:latest
   artifacts:
     paths:
@@ -98,80 +110,94 @@ scan:trivy:
     - if: $CI_COMMIT_BRANCH
     - if: $CI_COMMIT_TAG
 
-publish:
+publish:gitlab:
   stage: publish
   image: docker:24.0.5
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_COMMIT_TAG
   script:
-    # Set up QEMU for multi-platform builds
     - docker run --privileged --rm tonistiigi/binfmt --install all || true
     - docker buildx create --use
-    # Log in to GitLab Container Registry
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
-    # Log in to Docker Hub and compile tags/run build in a single shell block
     - |
-      DOCKERHUB_LOGGED_IN=""
-      if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_PASSWORD" ]; then
-        if echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin docker.io; then
-          DOCKERHUB_LOGGED_IN="true"
-        else
-          echo "Warning: Docker Hub login failed!"
-        fi
-      else
-        echo "Docker Hub credentials not configured. Skipping Docker Hub push."
-      fi
-
-      # Base image tags mapping
       GL_IMAGE="$CI_REGISTRY_IMAGE"
-      DH_IMAGE="docker.io/$IMAGE_NAME"
       TAGS_ARGS=""
-
-      add_tags() {
-        local tag=$1
-        TAGS_ARGS="$TAGS_ARGS -t $GL_IMAGE:$tag"
-        if [ "$DOCKERHUB_LOGGED_IN" = "true" ]; then
-          TAGS_ARGS="$TAGS_ARGS -t $DH_IMAGE:$tag"
-        fi
+      add_tag() {
+        TAGS_ARGS="$TAGS_ARGS -t $GL_IMAGE:$1"
       }
-
+      
       if [ -n "$CI_COMMIT_TAG" ]; then
-        # When a git tag is pushed:
-        # Tag docker image with the git tag and latest
-        add_tags "$CI_COMMIT_TAG"
-        add_tags "latest"
-        
-        # If the tag is a semver tag (like v1.2.3, 1.2.3, or 0.30.0-5), also generate semver tags
+        add_tag "$CI_COMMIT_TAG"
+        add_tag "latest"
         if echo "$CI_COMMIT_TAG" | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+(-.*)?$' > /dev/null; then
           SEMVER=$(echo "$CI_COMMIT_TAG" | sed 's/^v//')
-          add_tags "$SEMVER"
-          
-          # Only generate major/minor tags for clean semver releases (no pre-release/revision suffix)
+          add_tag "$SEMVER"
           if echo "$SEMVER" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' > /dev/null; then
             MAJOR=$(echo "$SEMVER" | cut -d. -f1)
             MINOR=$(echo "$SEMVER" | cut -d. -f2)
-            add_tags "$MAJOR.$MINOR"
-            add_tags "$MAJOR"
+            add_tag "$MAJOR.$MINOR"
+            add_tag "$MAJOR"
           fi
         fi
-      elif [ "$CI_COMMIT_BRANCH" = "main" ] ; then
-        # When pushed to main branch:
-        # Tag docker image as devel
-        add_tags "devel"
+      elif [ "$CI_COMMIT_BRANCH" = "main" ]; then
+        add_tag "devel"
       fi
-
-      echo "Building and pushing multi-platform images with tags: $TAGS_ARGS"
       
-      # Build and push multi-platform images using buildx
-      # We cache build layers using the GitLab registry cache
+      echo "Building and pushing multi-platform images to GitLab Registry with tags: $TAGS_ARGS"
       docker buildx build \
         --platform linux/amd64,linux/arm64 \
         --pull \
         $TAGS_ARGS \
         --push \
         --cache-from "type=registry,ref=$GL_IMAGE:cache" \
-        --cache-to "type=registry,ref=$GL_IMAGE:cache,mode=max" \
+        .
+
+publish:dockerhub:
+  stage: publish
+  image: docker:24.0.5
+  rules:
+    - if: $DOCKERHUB_USERNAME == "" || $DOCKERHUB_PASSWORD == ""
+      when: never
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_TAG
+  script:
+    - docker run --privileged --rm tonistiigi/binfmt --install all || true
+    - docker buildx create --use
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin docker.io
+    - |
+      GL_IMAGE="$CI_REGISTRY_IMAGE"
+      DH_IMAGE="docker.io/$IMAGE_NAME"
+      TAGS_ARGS=""
+      add_tag() {
+        TAGS_ARGS="$TAGS_ARGS -t $DH_IMAGE:$1"
+      }
+      
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        add_tag "$CI_COMMIT_TAG"
+        add_tag "latest"
+        if echo "$CI_COMMIT_TAG" | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+(-.*)?$' > /dev/null; then
+          SEMVER=$(echo "$CI_COMMIT_TAG" | sed 's/^v//')
+          add_tag "$SEMVER"
+          if echo "$SEMVER" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' > /dev/null; then
+            MAJOR=$(echo "$SEMVER" | cut -d. -f1)
+            MINOR=$(echo "$SEMVER" | cut -d. -f2)
+            add_tag "$MAJOR.$MINOR"
+            add_tag "$MAJOR"
+          fi
+        fi
+      elif [ "$CI_COMMIT_BRANCH" = "main" ]; then
+        add_tag "devel"
+      fi
+      
+      echo "Building and pushing multi-platform images to Docker Hub with tags: $TAGS_ARGS"
+      docker buildx build \
+        --platform linux/amd64,linux/arm64 \
+        --pull \
+        $TAGS_ARGS \
+        --push \
+        --cache-from "type=registry,ref=$GL_IMAGE:cache" \
         .
 
 create_release:
