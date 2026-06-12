@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.30.0-10] - 2026-06-12
+### Fixed
+- **Startup Warnings & Cache Safety**:
+  - Silenced Supervisord critical warning when running as root without dropped privileges.
+  - Silenced PHP command checks warning `sh: where: not found` and muted other shell check outputs.
+  - Hardened permissions initialization script by creating cache folders dynamically before configuring their permissions.
+
 ## [0.30.0-9] - 2026-06-12
 ### Added
 - **Automatic Cache Permissions**: Added a Supervisor initialization task (`init_perms.sh`) to automatically set the correct ownership (`nginx:www-data`) and write permissions (`755`) on cache directories at startup.
