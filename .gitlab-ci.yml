@@ -167,6 +167,6 @@ publish:
         --pull \
         $TAGS_ARGS \
         --push \
-        --cache-from "$GL_IMAGE:cache" \
-        --cache-to "$GL_IMAGE:cache,mode=max" \
+        --cache-from "type=registry,ref=$GL_IMAGE:cache" \
+        --cache-to "type=registry,ref=$GL_IMAGE:cache,mode=max" \
         .
