@@ -157,10 +157,8 @@ publish:dockerhub:
   stage: publish
   image: docker:24.0.5
   rules:
-    - if: $DOCKERHUB_USERNAME == "" || $DOCKERHUB_PASSWORD == ""
-      when: never
-    - if: $CI_COMMIT_BRANCH == "main"
-    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == "main" && $DOCKERHUB_USERNAME && $DOCKERHUB_PASSWORD
+    - if: $CI_COMMIT_TAG && $DOCKERHUB_USERNAME && $DOCKERHUB_PASSWORD
   script:
     - docker run --privileged --rm tonistiigi/binfmt --install all || true
     - docker buildx create --use
