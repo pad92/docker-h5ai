@@ -2,9 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.30.0-12] - 2026-06-12
+### Changed
+- **h5ai Base Upgrade**: Upgraded built h5ai base version to `0.30.0-pad92.5`.
+  - Added configuration documentation file `doc/configuration.md`.
+  - Modernized photo preview to display EXIF metadata in a responsive glassmorphic panel.
+
 ## [0.30.0-11] - 2026-06-12
 ### Changed
 - **h5ai Base Upgrade**: Upgraded built h5ai base version to `0.30.0-pad92.4`.
+  - Optimized and standardized UI icon SVG markup and structure.
 
 ## [0.30.0-10] - 2026-06-12
 ### Fixed
