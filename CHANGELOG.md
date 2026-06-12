@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.30.0-11] - 2026-06-12
+### Changed
+- **h5ai Base Upgrade**: Upgraded built h5ai base version to `0.30.0-pad92.4`.
+
 ## [0.30.0-10] - 2026-06-12
 ### Fixed
 - **Startup Warnings & Cache Safety**:
