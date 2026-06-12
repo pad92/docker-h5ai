@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.30.0-6] - 2026-06-12
+### Added
+- **Persistent Cache Documentation**: Added instructions in `README.md` to persist public (thumbnails) and private cache across container restarts via volume mounts.
+
+### Changed
+- **h5ai Base Upgrade**: Upgraded the compiled h5ai base version to `0.30.0-pad92.1` using the `pad92/h5ai` custom fork, which integrates `movi-player` for modernized video previews, upgrades the `marked` library, and enables cross-origin isolation.
+
 ## [0.30.0-5] - 2026-06-12
 ### Added
 - **GitLab Release Automation**: Configured `release-cli` in the CI/CD pipeline to automatically generate GitLab Release pages from tag descriptions in `CHANGELOG.md`.

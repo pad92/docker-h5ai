@@ -1,4 +1,4 @@
-ARG H5AI_VERSION=0.30.0
+ARG H5AI_VERSION=0.30.0-pad92.1
 
 FROM node:20-alpine AS builder
 
@@ -6,15 +6,15 @@ ARG H5AI_VERSION
 ENV H5AI_VERSION=${H5AI_VERSION}
 
 RUN apk add --no-cache git patch \
- && git clone https://github.com/lrsjng/h5ai.git \
- && cd h5ai \
- && git checkout -b ${H5AI_VERSION} tags/v${H5AI_VERSION} \
- && npm install \
- && NODE_OPTIONS=--openssl-legacy-provider npm run build
+    && git clone https://github.com/pad92/h5ai.git \
+    && cd h5ai \
+    && git checkout -b ${H5AI_VERSION} tags/v${H5AI_VERSION} \
+    && npm install \
+    && NODE_OPTIONS=--openssl-legacy-provider npm run build
 
 COPY class-setup.php.patch /class-setup.php.patch
 RUN patch -p1 -u -d /h5ai/build/_h5ai/private/php/core/ -i /class-setup.php.patch \
- && rm /class-setup.php.patch
+    && rm /class-setup.php.patch
 
 FROM nginx:1.26-alpine-slim
 
@@ -50,23 +50,23 @@ COPY --from=builder /h5ai/build/_h5ai /usr/share/h5ai/_h5ai
 COPY slash/     /
 
 RUN ln -sf /dev/stderr /var/log/php83/error.log \
- && ln -sf /dev/stdout /var/log/nginx/access.log \
- && ln -sf /dev/stderr /var/log/nginx/error.log \
- && chown nginx:www-data /usr/share/h5ai/_h5ai/public/cache/ \
- && chown nginx:www-data /usr/share/h5ai/_h5ai/private/cache/
+    && ln -sf /dev/stdout /var/log/nginx/access.log \
+    && ln -sf /dev/stderr /var/log/nginx/error.log \
+    && chown nginx:www-data /usr/share/h5ai/_h5ai/public/cache/ \
+    && chown nginx:www-data /usr/share/h5ai/_h5ai/private/cache/
 
 ARG BUILD_DATE
 ARG BUILD_VCSREF
 
 LABEL maintainer="pad92" \
-      org.label-schema.url="https://github.com/pad92/docker-h5ai/blob/main/README.md" \
-      org.label-schema.build-date=$BUILD_DATE \
-      org.label-schema.version=$H5AI_VERSION \
-      org.label-schema.vcs-url="https://github.com/pad92/docker-h5ai.git" \
-      org.label-schema.vcs-ref=$BUILD_VCSREF \
-      org.label-schema.docker.dockerfile="/Dockerfile" \
-      org.label-schema.description="h5ai on alpine docker image" \
-      org.label-schema.schema-version="1.0"
+    org.label-schema.url="https://github.com/pad92/docker-h5ai/blob/main/README.md" \
+    org.label-schema.build-date=$BUILD_DATE \
+    org.label-schema.version=$H5AI_VERSION \
+    org.label-schema.vcs-url="https://github.com/pad92/docker-h5ai.git" \
+    org.label-schema.vcs-ref=$BUILD_VCSREF \
+    org.label-schema.docker.dockerfile="/Dockerfile" \
+    org.label-schema.description="h5ai on alpine docker image" \
+    org.label-schema.schema-version="1.0"
 
 EXPOSE 80
 
