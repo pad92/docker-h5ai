@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.30.0-5] - Upcoming Release
+## [0.30.0-5] - 2026-06-12
 ### Added
 - **GitLab Release Automation**: Configured `release-cli` in the CI/CD pipeline to automatically generate GitLab Release pages from tag descriptions in `CHANGELOG.md`.
 - **Security Headers**: Enabled `X-Frame-Options`, `X-Content-Type-Options`, and `X-XSS-Protection` headers in the Nginx configuration.
