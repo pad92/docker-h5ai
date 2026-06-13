@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.30.0-14] - 2026-06-13
+### Changed
+- **h5ai Base Upgrade**: Upgraded built h5ai base version to `0.30.0-pad92.7`.
+  - Added persistent folder size caching and background cache warming (`warm-cache.php`).
+  - Added cache options in `options.json` and updated configuration documentation.
+
 ## [0.30.0-13] - 2026-06-13
 ### Changed
 - **h5ai Base Upgrade**: Upgraded built h5ai base version to `0.30.0-pad92.6`.
