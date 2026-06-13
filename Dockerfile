@@ -1,4 +1,4 @@
-ARG H5AI_VERSION=0.30.0-pad92.5
+ARG H5AI_VERSION=0.30.0-pad92.6
 
 FROM node:20-alpine AS builder
 
@@ -26,6 +26,8 @@ RUN apk update && apk upgrade --no-cache && apk add --no-cache \
     curl \
     ffmpeg \
     imagemagick \
+    imagemagick-raw \
+    libraw \
     php83 \
     php83-exif \
     php83-fileinfo \

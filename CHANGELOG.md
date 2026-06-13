@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.30.0-13] - 2026-06-13
+### Changed
+- **h5ai Base Upgrade**: Upgraded built h5ai base version to `0.30.0-pad92.6`.
+- **Raw Image Support**: Added `imagemagick-raw` and `libraw` packages to enable previews for RAW photos.
+
 ## [0.30.0-12] - 2026-06-12
 ### Changed
 - **h5ai Base Upgrade**: Upgraded built h5ai base version to `0.30.0-pad92.5`.
