@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.30.0-15] - 2026-06-14
+### Changed
+- **h5ai Base Upgrade**: Upgraded built h5ai base version to `0.30.0-pad92.8`.
+  - Integrated Pull Request #765 for improved video thumbnail generation and prevention of thumbnail DoS exploit.
+  - Used ffprobe/avprobe to query total video duration and seek into a configurable percentage (default 50%).
+  - Limited client control over generated thumbnail sizes to prevent resource exhaustion exploits.
+  - Configured CSS object-fit on thumbnails for responsive square cropping.
+
 ## [0.30.0-14] - 2026-06-13
 ### Changed
 - **h5ai Base Upgrade**: Upgraded built h5ai base version to `0.30.0-pad92.7`.
