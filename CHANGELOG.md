@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.30.0-16] - 2026-06-18
+### Changed
+- **Base Image Upgrade**: Upgraded `nginx` base image from `1.26` to `1.30`.
+- **PHP Version Upgrade**: Upgraded `php` base image to version `8.3` (Alpine).
+- **OpenSSL Update**: Upgraded OpenSSL to version `3.3.7-r0` to resolve security vulnerabilities and build compatibility issues.
+
 ## [0.30.0-15] - 2026-06-14
 ### Changed
 - **h5ai Base Upgrade**: Upgraded built h5ai base version to `0.30.0-pad92.8`.
