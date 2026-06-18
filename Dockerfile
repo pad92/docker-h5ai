@@ -16,7 +16,7 @@ COPY class-setup.php.patch /class-setup.php.patch
 RUN patch -p1 -u -d /h5ai/build/_h5ai/private/php/core/ -i /class-setup.php.patch \
     && rm /class-setup.php.patch
 
-FROM nginx:1.26-alpine-slim
+FROM nginx:1.30-alpine-slim
 
 ARG H5AI_VERSION
 ENV H5AI_VERSION=${H5AI_VERSION}
