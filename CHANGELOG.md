@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.30.0-17] - 2026-06-18
+### Changed
+- **Web Server Migration**: Migrated web server from Nginx to Angie (version 1.11.7-minimal, Alpine-based).
+- **Configuration & Paths Updates**: Migrated configuration paths and files to `/etc/angie/angie.conf`, updated supervisord task definitions, and adjusted file ownership/permissions to use the `angie` user.
+
 ## [0.30.0-16] - 2026-06-18
 ### Changed
 - **Base Image Upgrade**: Upgraded `nginx` base image from `1.26` to `1.30`.

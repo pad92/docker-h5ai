@@ -16,7 +16,7 @@ COPY class-setup.php.patch /class-setup.php.patch
 RUN patch -p1 -u -d /h5ai/build/_h5ai/private/php/core/ -i /class-setup.php.patch \
     && rm /class-setup.php.patch
 
-FROM nginx:1.30-alpine-slim
+FROM docker.angie.software/angie:1.11.7-minimal
 
 ARG H5AI_VERSION
 ENV H5AI_VERSION=${H5AI_VERSION}
@@ -52,11 +52,11 @@ COPY --from=builder /h5ai/build/_h5ai /usr/share/h5ai/_h5ai
 COPY slash/     /
 
 RUN ln -sf /dev/stderr /var/log/php83/error.log \
-    && ln -sf /dev/stdout /var/log/nginx/access.log \
-    && ln -sf /dev/stderr /var/log/nginx/error.log \
-    && chmod +x /usr/local/bin/nginx_auth.sh /usr/local/bin/init_perms.sh \
-    && chown nginx:www-data /usr/share/h5ai/_h5ai/public/cache/ \
-    && chown nginx:www-data /usr/share/h5ai/_h5ai/private/cache/
+    && ln -sf /dev/stdout /var/log/angie/access.log \
+    && ln -sf /dev/stderr /var/log/angie/error.log \
+    && chmod +x /usr/local/bin/angie_auth.sh /usr/local/bin/init_perms.sh \
+    && chown angie:www-data /usr/share/h5ai/_h5ai/public/cache/ \
+    && chown angie:www-data /usr/share/h5ai/_h5ai/private/cache/
 
 ARG BUILD_DATE
 ARG BUILD_VCSREF
