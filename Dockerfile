@@ -1,4 +1,4 @@
-ARG H5AI_VERSION=0.30.0-pad92.8
+ARG H5AI_VERSION=1.0.0
 
 FROM node:20-alpine AS builder
 
