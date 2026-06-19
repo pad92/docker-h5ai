@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-06-19
+### Changed
+- **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.1.0`.
+- **Build Process Optimization**: Modified the Docker image builder stage to download the pre-compiled `h5ai` zip package directly from the public GitLab Generic Packages Registry instead of git cloning and compiling it from source.
+
+## [1.0.0] - 2026-06-18
+### Changed
+- **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.0.0`.
+
 ## [0.30.0-17] - 2026-06-18
 ### Changed
 - **Web Server Migration**: Migrated web server from Nginx to Angie (version 1.11.7-minimal, Alpine-based).

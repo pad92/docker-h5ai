@@ -1,16 +1,15 @@
-ARG H5AI_VERSION=1.0.0
+ARG H5AI_VERSION=1.1.0
 
-FROM node:20-alpine AS builder
+FROM alpine:3.20 AS builder
 
 ARG H5AI_VERSION
 ENV H5AI_VERSION=${H5AI_VERSION}
 
-RUN apk add --no-cache git patch \
-    && git clone https://github.com/pad92/h5ai.git \
-    && cd h5ai \
-    && git checkout -b ${H5AI_VERSION} tags/v${H5AI_VERSION} \
-    && npm install \
-    && npm run build
+RUN apk add --no-cache curl patch unzip \
+    && curl -L -o /tmp/h5ai.zip "https://gitlab.com/api/v4/projects/83496424/packages/generic/h5ai/${H5AI_VERSION}/h5ai-${H5AI_VERSION}.zip" \
+    && mkdir -p /h5ai/build/_h5ai \
+    && unzip /tmp/h5ai.zip -d /h5ai/build/_h5ai \
+    && rm /tmp/h5ai.zip
 
 COPY class-setup.php.patch /class-setup.php.patch
 RUN patch -p1 -u -d /h5ai/build/_h5ai/private/php/core/ -i /class-setup.php.patch \
