@@ -20,7 +20,7 @@ FROM docker.angie.software/angie:1.11.7-minimal
 ARG H5AI_VERSION
 ENV H5AI_VERSION=${H5AI_VERSION}
 
-RUN apk update && apk upgrade --no-cache && apk add --no-cache \
+RUN apk upgrade --no-cache && apk add --no-cache \
     apache2-utils \
     curl \
     ffmpeg \
@@ -42,7 +42,6 @@ RUN apk update && apk upgrade --no-cache && apk add --no-cache \
     php83-xml \
     php83-xmlwriter \
     php83-zip \
-    supervisor \
     tzdata \
     zip
 
@@ -53,7 +52,7 @@ COPY slash/     /
 RUN ln -sf /dev/stderr /var/log/php83/error.log \
     && ln -sf /dev/stdout /var/log/angie/access.log \
     && ln -sf /dev/stderr /var/log/angie/error.log \
-    && chmod +x /usr/local/bin/angie_auth.sh /usr/local/bin/init_perms.sh \
+    && chmod +x /usr/local/bin/entrypoint.sh \
     && chown angie:www-data /usr/share/h5ai/_h5ai/public/cache/ \
     && chown angie:www-data /usr/share/h5ai/_h5ai/private/cache/
 
@@ -72,5 +71,5 @@ LABEL maintainer="pad92" \
 
 EXPOSE 80
 
-CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+CMD ["/usr/local/bin/entrypoint.sh"]
 HEALTHCHECK CMD curl -I --fail http://localhost/ || exit 1
