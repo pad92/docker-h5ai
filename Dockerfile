@@ -1,4 +1,4 @@
-ARG H5AI_VERSION=1.1.0
+ARG H5AI_VERSION=1.1.1
 
 FROM alpine:3.20 AS builder
 
