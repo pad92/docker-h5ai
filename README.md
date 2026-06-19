@@ -43,6 +43,20 @@ docker container run -d -p 80:80 \
   pad92/docker-h5ai
 ```
 
+### With h5ai Info Page Password (Administration)
+
+To secure the h5ai diagnostic/info page (located at `/_h5ai/public/index.php`), define the password using the `H5AI_ADMIN_PASSWORD` environment variable. The container will automatically generate the required SHA-512 hash and update `options.json` at startup:
+
+```bash
+docker container run -d -p 80:80 \
+  -e H5AI_ADMIN_PASSWORD=myadminpassword \
+  -v /path/to/sharing-file:/share \
+  pad92/docker-h5ai
+```
+
+> [!NOTE]
+> If `H5AI_ADMIN_PASSWORD` is not defined (or empty), a cryptographically secure random 32-character password is automatically generated at boot, written to the startup logs, and hashed in `options.json` to keep the info page secure by default.
+
 ### With Custom h5ai Options
 
 To override the default [options.json](https://raw.githubusercontent.com/lrsjng/h5ai/v0.29.0/src/_h5ai/private/conf/options.json) file, mount your custom file into `/usr/share/h5ai/_h5ai/private/conf/options.json`:
@@ -90,6 +104,7 @@ services:
     environment:
       - ENV_U=admin
       - ENV_P=mysecretpassword
+      - H5AI_ADMIN_PASSWORD=myadminpassword
     volumes:
       - /path/to/sharing-file:/share:ro
     restart: unless-stopped

@@ -2,7 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.1.1-1] - 2026-06-19
+## [1.1.2] - 2026-06-19
+### Added
+- **Administration Password Configuration**: Added support for a `H5AI_ADMIN_PASSWORD` environment variable to automatically set the SHA-512 `passhash` configuration in `options.json` at startup. If not provided, a random password is generated at boot and written to the startup logs.
+
 ### Changed
 - **Process Manager Migration**: Migrated process management from Supervisor to s6-overlay (v3), providing robust process initialization, signal forwarding, and service supervision.
 - **Image Size Optimization**: Reduced final unpacked image size from 391MB to 321MB (saving 70MB, or ~18% reduction) by removing Supervisord and its Python 3 runtime dependencies.

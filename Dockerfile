@@ -1,4 +1,4 @@
-ARG H5AI_VERSION=1.1.1
+ARG H5AI_VERSION=1.1.2
 
 FROM alpine:3.20 AS builder
 
@@ -9,9 +9,9 @@ ARG S6_OVERLAY_VERSION=3.1.6.2
 ARG TARGETARCH
 
 RUN case "${TARGETARCH}" in \
-        "amd64") S6_ARCH="x86_64" ;; \
-        "arm64") S6_ARCH="aarch64" ;; \
-        *) S6_ARCH="x86_64" ;; \
+    "amd64") S6_ARCH="x86_64" ;; \
+    "arm64") S6_ARCH="aarch64" ;; \
+    *) S6_ARCH="x86_64" ;; \
     esac \
     && apk add --no-cache curl patch unzip xz \
     && curl -L -o /tmp/h5ai.zip "https://gitlab.com/api/v4/projects/83496424/packages/generic/h5ai/${H5AI_VERSION}/h5ai-${H5AI_VERSION}.zip" \
