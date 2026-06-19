@@ -3,8 +3,10 @@
 # Set permissions for h5ai cache directories
 echo "Setting permissions for h5ai cache directories..."
 mkdir -p /usr/share/h5ai/_h5ai/public/cache /usr/share/h5ai/_h5ai/private/cache
-chown -R angie:www-data /usr/share/h5ai/_h5ai/public/cache /usr/share/h5ai/_h5ai/private/cache
-chmod -R 755 /usr/share/h5ai/_h5ai/public/cache /usr/share/h5ai/_h5ai/private/cache
+find /usr/share/h5ai/_h5ai/public/cache /usr/share/h5ai/_h5ai/private/cache \
+    \( ! -user angie -o ! -group www-data \) -exec chown angie:www-data {} +
+find /usr/share/h5ai/_h5ai/public/cache /usr/share/h5ai/_h5ai/private/cache \
+    ! -perm 755 -exec chmod 755 {} +
 
 # Handle basic auth
 if [ -n "${ENV_U}" ] && [ -n "${ENV_P}" ]; then

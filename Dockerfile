@@ -1,4 +1,4 @@
-ARG H5AI_VERSION=1.1.2
+ARG H5AI_VERSION=1.1.3
 
 FROM alpine:3.20 AS builder
 
@@ -34,6 +34,7 @@ FROM docker.angie.software/angie:1.11.7-minimal
 ARG H5AI_VERSION
 ENV H5AI_VERSION=${H5AI_VERSION}
 ENV S6_KEEP_ENV=1
+ENV S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0
 
 RUN apk upgrade --no-cache && apk add --no-cache \
     apache2-utils \

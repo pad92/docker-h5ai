@@ -2,27 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.3] - 2026-06-19
+### Changed
+- **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.1.3` (adds dynamic version display in the info page header/backlinks, adjusted build versioning logic, and CI/CD release pipeline fixes).
+
+### Fixed
+- **s6-overlay Startup Timeout**: Configured `S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0` to prevent s6-overlay from timing out during slow container startup.
+- **Permissions Optimization**: Optimized the startup permissions initialization script to only run `chown` and `chmod` on files/directories with incorrect owner/group or permissions, significantly speeding up container boot times when cache volumes are populated.
+
 ## [1.1.2] - 2026-06-19
 ### Added
 - **Administration Password Configuration**: Added support for a `H5AI_ADMIN_PASSWORD` environment variable to automatically set the SHA-512 `passhash` configuration in `options.json` at startup. If not provided, a random password is generated at boot and written to the startup logs.
 
 ### Changed
+- **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.1.2` (adds dynamic version display in the topbar backlink, global repository migration to `pad92`, and new administrative documentation).
 - **Process Manager Migration**: Migrated process management from Supervisor to s6-overlay (v3), providing robust process initialization, signal forwarding, and service supervision.
 - **Image Size Optimization**: Reduced final unpacked image size from 391MB to 321MB (saving 70MB, or ~18% reduction) by removing Supervisord and its Python 3 runtime dependencies.
 - **Multi-Platform Support**: Added dynamic architecture mapping in the Dockerfile builder stage to download the appropriate s6-overlay binaries depending on `TARGETARCH`, enabling seamless `amd64` and `arm64` builds.
 
 ## [1.1.1] - 2026-06-19
 ### Changed
-- **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.1.1`.
+- **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.1.1` (adds loop detection and symlink verification to prevent infinite recursion, and visited path tracking to prevent circular traversals).
 
 ## [1.1.0] - 2026-06-19
 ### Changed
-- **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.1.0`.
+- **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.1.0` (redesigned modern glassmorphic audio player with persistent playback and queue management, optimized folder size caching, secured CacheDB queries, and added new automated CI/CD and security audit checks).
 - **Build Process Optimization**: Modified the Docker image builder stage to download the pre-compiled `h5ai` zip package directly from the public GitLab Generic Packages Registry instead of git cloning and compiling it from source.
 
 ## [1.0.0] - 2026-06-18
 ### Changed
-- **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.0.0`.
+- **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.0.0` (migrated build system from ghu to gulp, added WebP thumbnail support, limited image previews to 80% screen width, and fixed CacheDB/filesize check errors).
 
 ## [0.30.0-17] - 2026-06-18
 ### Changed
