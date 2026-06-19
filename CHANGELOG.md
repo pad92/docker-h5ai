@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1-1] - 2026-06-19
+### Changed
+- **Process Manager Migration**: Migrated process management from Supervisor to s6-overlay (v3), providing robust process initialization, signal forwarding, and service supervision.
+- **Image Size Optimization**: Reduced final unpacked image size from 391MB to 321MB (saving 70MB, or ~18% reduction) by removing Supervisord and its Python 3 runtime dependencies.
+- **Multi-Platform Support**: Added dynamic architecture mapping in the Dockerfile builder stage to download the appropriate s6-overlay binaries depending on `TARGETARCH`, enabling seamless `amd64` and `arm64` builds.
+
 ## [1.1.1] - 2026-06-19
 ### Changed
 - **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.1.1`.
