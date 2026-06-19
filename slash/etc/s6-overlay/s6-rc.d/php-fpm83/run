@@ -1,0 +1,2 @@
+#!/command/with-contenv sh
+exec /usr/sbin/php-fpm83 --nodaemonize --fpm-config /etc/php83/php-fpm.conf
