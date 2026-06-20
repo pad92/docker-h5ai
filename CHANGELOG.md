@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.4] - 2026-06-20
+
+### Added
+- **SQLite3 Support**: Added `php83-sqlite3` and `php83-pdo_sqlite` extensions to enable database/SQLite3 caching support in PHP.
+- **RAR Archive Support**: Compiled and installed the `rar` extension from git source to ensure compatibility with PHP 8.3.
+- **Path Customization**: Added the `H5AI_ROOT_PATH=/share` environment variable to support customizable root folder mappings.
+
+### Changed
+- **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.1.4` (adds alternating list row colors / zebra striping, fixes dark mode link hover tone-on-tone readability issues, and introduces smooth hover highlights for lists).
+
+### Fixed
+- **Redundant Permissions Configuration**: Cleaned up build-time cache directories `chown` in the Dockerfile, relying entirely on the runtime s6-overlay permission setup.
+
 ## [1.1.3] - 2026-06-19
 ### Changed
 - **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.1.3` (adds dynamic version display in the info page header/backlinks, adjusted build versioning logic, and CI/CD release pipeline fixes).

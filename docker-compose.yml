@@ -7,8 +7,8 @@ services:
     ports:
       - 8888:80
     volumes:
+      - ./../h5ai/build/_h5ai:/usr/share/h5ai/_h5ai
       - .:/share/src:ro
-      - /tmp:/share/tmp:ro
     deploy:
       resources:
         limits:
