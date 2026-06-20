@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.5] - 2026-06-20
+
+### Changed
+- **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.1.5` (resolves aggressive caching of directory data by adding HTTP cache control headers to API responses, fixes folder list refresh tree-view updates, fixes item model bug that marked parent content fetched prematurely, and restores search/filter colors/visibility in dark mode).
+
 ## [1.1.4] - 2026-06-20
 
 ### Added
