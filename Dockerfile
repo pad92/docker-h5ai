@@ -1,6 +1,6 @@
-ARG H5AI_VERSION=1.1.3
+ARG H5AI_VERSION=1.1.4
 
-FROM alpine:3.20 AS builder
+FROM php:8.3-alpine AS builder
 
 ARG H5AI_VERSION
 ENV H5AI_VERSION=${H5AI_VERSION}
@@ -29,12 +29,24 @@ COPY class-setup.php.patch /class-setup.php.patch
 RUN patch -p1 -u -d /h5ai/build/_h5ai/private/php/core/ -i /class-setup.php.patch \
     && rm /class-setup.php.patch
 
+# Build php-rar extension from git source because PECL 4.2.0 is incompatible with PHP 8.3 zend_resolve_path API
+RUN apk add --no-cache --virtual .build-deps git autoconf g++ make \
+    && git clone https://github.com/cataphract/php-rar.git /tmp/php-rar \
+    && cd /tmp/php-rar \
+    && phpize \
+    && ./configure \
+    && make -j$(nproc) \
+    && make install \
+    && apk del .build-deps \
+    && rm -rf /tmp/php-rar
+
 FROM docker.angie.software/angie:1.11.7-minimal
 
 ARG H5AI_VERSION
 ENV H5AI_VERSION=${H5AI_VERSION}
 ENV S6_KEEP_ENV=1
 ENV S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0
+ENV H5AI_ROOT_PATH=/share
 
 RUN apk upgrade --no-cache && apk add --no-cache \
     apache2-utils \
@@ -55,6 +67,8 @@ RUN apk upgrade --no-cache && apk add --no-cache \
     php83-pecl-imagick \
     php83-session \
     php83-simplexml \
+    php83-sqlite3 \
+    php83-pdo_sqlite \
     php83-xml \
     php83-xmlwriter \
     php83-zip \
@@ -63,6 +77,7 @@ RUN apk upgrade --no-cache && apk add --no-cache \
 
 COPY --from=builder /h5ai/build/_h5ai /usr/share/h5ai/_h5ai
 COPY --from=builder /s6-overlay/ /
+COPY --from=builder /usr/local/lib/php/extensions/no-debug-non-zts-20230831/rar.so /usr/lib/php83/modules/rar.so
 
 COPY slash/     /
 
@@ -73,8 +88,7 @@ RUN ln -sf /dev/stderr /var/log/php83/error.log \
     && chmod +x /etc/s6-overlay/s6-rc.d/php-fpm83/run \
     && chmod +x /etc/s6-overlay/s6-rc.d/angie/run \
     && chmod +x /usr/local/bin/init-perms-auth.sh \
-    && chown angie:www-data /usr/share/h5ai/_h5ai/public/cache/ \
-    && chown angie:www-data /usr/share/h5ai/_h5ai/private/cache/
+    && echo "extension=rar.so" > /etc/php83/conf.d/50_rar.ini
 
 ARG BUILD_DATE
 ARG BUILD_VCSREF
