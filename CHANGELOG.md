@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.6] - 2026-06-21
+
+### Changed
+- **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.1.6` (rebuilds tree on refresh to prevent collapse while preserving node state, moves no-cache HTTP headers to list API response only, defaults unset ROOT_PATH to parent of H5AI_PATH, adds isContentFetched tracking, cleans dark theme CSS rules, and expands type mappings in configurations).
+
 ## [1.1.5] - 2026-06-20
 
 ### Changed
