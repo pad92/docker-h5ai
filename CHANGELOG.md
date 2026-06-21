@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.2.1] - 2026-06-21
+## [1.2.0-1] - 2026-06-21
 
 ### Changed
 - **CI Docker Image Upgrade**: Upgraded CI/CD Docker-in-Docker image from `24.0.5` to `28` across build, test, and publish stages.
