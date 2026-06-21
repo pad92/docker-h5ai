@@ -1,6 +1,6 @@
-ARG H5AI_VERSION=1.1.7
+ARG H5AI_VERSION=1.2.0
 
-FROM php:8.3-alpine AS builder
+FROM php:8.4-alpine AS builder
 
 ARG H5AI_VERSION
 ENV H5AI_VERSION=${H5AI_VERSION}
@@ -29,7 +29,7 @@ COPY class-setup.php.patch /class-setup.php.patch
 RUN patch -p1 -u -d /h5ai/build/_h5ai/private/php/core/ -i /class-setup.php.patch \
     && rm /class-setup.php.patch
 
-# Build php-rar extension from git source because PECL 4.2.0 is incompatible with PHP 8.3 zend_resolve_path API
+# Build php-rar extension from git source because PECL 4.2.0 is incompatible with PHP 8.4 zend_resolve_path API
 RUN apk add --no-cache --virtual .build-deps git autoconf g++ make \
     && git clone https://github.com/cataphract/php-rar.git /tmp/php-rar \
     && cd /tmp/php-rar \
@@ -55,40 +55,40 @@ RUN apk upgrade --no-cache && apk add --no-cache \
     imagemagick \
     imagemagick-raw \
     libraw \
-    php83 \
-    php83-exif \
-    php83-fileinfo \
-    php83-fpm \
-    php83-gd \
-    php83-intl \
-    php83-mbstring \
-    php83-opcache \
-    php83-openssl \
-    php83-pecl-imagick \
-    php83-session \
-    php83-simplexml \
-    php83-sqlite3 \
-    php83-pdo_sqlite \
-    php83-xml \
-    php83-xmlwriter \
-    php83-zip \
+    php84 \
+    php84-exif \
+    php84-fileinfo \
+    php84-fpm \
+    php84-gd \
+    php84-intl \
+    php84-mbstring \
+    php84-opcache \
+    php84-openssl \
+    php84-pecl-imagick \
+    php84-session \
+    php84-simplexml \
+    php84-sqlite3 \
+    php84-pdo_sqlite \
+    php84-xml \
+    php84-xmlwriter \
+    php84-zip \
     tzdata \
     zip
 
 COPY --from=builder /h5ai/build/_h5ai /usr/share/h5ai/_h5ai
 COPY --from=builder /s6-overlay/ /
-COPY --from=builder /usr/local/lib/php/extensions/no-debug-non-zts-20230831/rar.so /usr/lib/php83/modules/rar.so
+COPY --from=builder /usr/local/lib/php/extensions/no-debug-non-zts-20240924/rar.so /usr/lib/php84/modules/rar.so
 
 COPY slash/     /
 
-RUN ln -sf /dev/stderr /var/log/php83/error.log \
+RUN ln -sf /dev/stderr /var/log/php84/error.log \
     && ln -sf /dev/stdout /var/log/angie/access.log \
     && ln -sf /dev/stderr /var/log/angie/error.log \
     && chmod +x /etc/s6-overlay/s6-rc.d/init-perms-auth/up \
-    && chmod +x /etc/s6-overlay/s6-rc.d/php-fpm83/run \
+    && chmod +x /etc/s6-overlay/s6-rc.d/php-fpm84/run \
     && chmod +x /etc/s6-overlay/s6-rc.d/angie/run \
     && chmod +x /usr/local/bin/init-perms-auth.sh \
-    && echo "extension=rar.so" > /etc/php83/conf.d/50_rar.ini
+    && echo "extension=rar.so" > /etc/php84/conf.d/50_rar.ini
 
 ARG BUILD_DATE
 ARG BUILD_VCSREF

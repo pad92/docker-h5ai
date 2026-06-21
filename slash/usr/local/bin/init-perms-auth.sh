@@ -23,7 +23,7 @@ if [ -n "${H5AI_ADMIN_PASSWORD}" ]; then
     H5AI_ADMIN_PASSHASH=$(echo -n "${H5AI_ADMIN_PASSWORD}" | sha512sum | cut -d' ' -f1)
 else
     echo "H5AI_ADMIN_PASSWORD not set. Generating a random password..."
-    RANDOM_PASS=$(php83 -r 'echo bin2hex(random_bytes(16));')
+    RANDOM_PASS=$(php84 -r 'echo bin2hex(random_bytes(16));')
     echo "--------------------------------------------------------"
     echo "Generated random h5ai administration password: ${RANDOM_PASS}"
     echo "--------------------------------------------------------"

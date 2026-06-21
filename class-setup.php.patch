@@ -1,26 +1,25 @@
 diff --git a/class-setup.php b/class-setup.php
 --- a/class-setup.php
 +++ b/class-setup.php
-@@ -133,9 +133,9 @@
- 
+@@ -121,9 +121,9 @@
+
          $cmds = Json::load($cmds_cache_path);
-         if (sizeof($cmds) === 0 || $this->refresh) {
+         if (count($cmds) === 0 || $this->refresh) {
 -            $cmds['command'] = Util::exec_0('command -v command');
 -            $cmds['which'] = Util::exec_0('which which') || Util::exec_0('which which.exe');
 -            $cmds['where'] = Util::exec_0('where where.exe');
 +            $cmds['command'] = Util::exec_0('command -v command 2>/dev/null');
 +            $cmds['which'] = Util::exec_0('which which 2>/dev/null');
 +            $cmds['where'] = false;
- 
-             $cmd = false;
-             if ($cmds['command']) {
-@@ -147,7 +147,7 @@
-             }
- 
+
+             $cmd = match (true) {
+                 $cmds['command'] => 'command -v',
+@@ -133,7 +133,7 @@
+             };
+
              foreach (['avconv', 'avprobe', 'convert', 'du', 'ffmpeg', 'ffprobe', 'gm', 'tar', 'zip'] as $c) {
 -                $cmds[$c] = ($cmd !== false) && (Util::exec_0($cmd . ' ' . $c) || Util::exec_0($cmd . ' ' . $c . '.exe'));
 +                $cmds[$c] = ($cmd !== false) && Util::exec_0($cmd . ' ' . $c . ' 2>/dev/null');
              }
- 
-             Json::save($cmds_cache_path, $cmds);
 
+             Json::save($cmds_cache_path, $cmds);

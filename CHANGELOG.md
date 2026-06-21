@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-06-21
+
+### Added
+- **PHP Version Upgrade**: Upgraded base image PHP version to `8.4` (Alpine-based), including path updates for the `rar` extension and s6-overlay configurations.
+
+### Changed
+- **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.2.0`.
+
 ## [1.1.7] - 2026-06-21
 
 ### Changed

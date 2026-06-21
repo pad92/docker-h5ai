@@ -2,7 +2,7 @@
 
 A Docker image for [h5ai](https://larsjung.de/h5ai/), a modern HTTP web server indexer. 
 
-Built on top of **Angie 1.11+ (Alpine)** and **PHP 8.3** with **Supervisor** for process management.
+Built on top of **Angie 1.11+ (Alpine)** and **PHP 8.4** with **s6-overlay** for process management.
 
 [![GitHub issues](https://img.shields.io/github/issues/pad92/docker-h5ai.svg)](https://github.com/pad92/docker-h5ai)
 [![Docker Pulls](https://img.shields.io/docker/pulls/pad92/docker-h5ai.svg)](https://hub.docker.com/r/pad92/docker-h5ai/)
@@ -11,11 +11,11 @@ Built on top of **Angie 1.11+ (Alpine)** and **PHP 8.3** with **Supervisor** for
 
 ## Features
 
-- **PHP 8.3 & Angie 1.11+** (Alpine-based, lightweight and secure).
+- **PHP 8.4 & Angie 1.11+** (Alpine-based, lightweight and secure).
 - **Basic Authentication** (built-in wrapper protecting both the directory indexing page and direct static file downloads).
 - **Hardened Security Headers** (`X-Frame-Options`, `X-Content-Type-Options`, `X-XSS-Protection` enabled).
 - **Proper UNIX Signal Handling** (Graceful shutdowns under Docker).
-- **Supervisor Process Management** (Auto-restart of services on failure).
+- **s6-overlay Process Management** (Auto-restart of services on failure).
 
 ---
 
@@ -86,7 +86,7 @@ docker container run -d -p 80:80 \
 ```
 
 > [!NOTE]
-> Upon container startup, a Supervisor initialization task automatically ensures that the cache directories have the correct ownership (`angie:www-data`) and permissions (`755`) so that the PHP process can write to them.
+> Upon container startup, an s6-overlay initialization task automatically ensures that the cache directories have the correct ownership (`angie:www-data`) and permissions (`755`) so that the PHP process can write to them.
 
 
 ---
