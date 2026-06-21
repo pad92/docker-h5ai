@@ -1,4 +1,4 @@
-ARG H5AI_VERSION=1.1.6
+ARG H5AI_VERSION=1.1.7
 
 FROM php:8.3-alpine AS builder
 

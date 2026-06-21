@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.7] - 2026-06-21
+
+### Changed
+- **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.1.7` (adds audio thumbnail generation using ffmpeg/avconv, close/stop button to the audio player queue, and background/asynchronous foldersize caching via a CLI helper refresh script).
+
 ## [1.1.6] - 2026-06-21
 
 ### Changed
