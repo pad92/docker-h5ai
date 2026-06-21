@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.1] - 2026-06-21
+
+### Changed
+- **CI Docker Image Upgrade**: Upgraded CI/CD Docker-in-Docker image from `24.0.5` to `28` across build, test, and publish stages.
+- **CI Publish Refactor**: Extracted a reusable `.publish-template` job template for multi-platform image publishing, removing duplication between GitLab and Docker Hub publish jobs.
+- **Security Headers**: Replaced deprecated `X-XSS-Protection` header with `Referrer-Policy` and `Content-Security-Policy` headers in Angie configuration.
+- **PHP OPcache JIT**: Disabled JIT compilation (`jit=disable`) to improve stability.
+- **PHP-FPM Configuration**: Added `[global]` section with explicit PID file and error log paths; tightened socket permissions from `0666` to `0660` with `angie` group ownership.
+- **Cache Ownership**: Changed cache directory ownership from `angie:www-data` to `angie:angie` for consistent permission model.
+- **s6-overlay Timeout**: Changed `S6_CMD_WAIT_FOR_SERVICES_MAXTIME` from `0` (infinite) to `30000` (30 seconds) to detect stuck services.
+- **Makefile Improvements**: Replaced hardcoded `sleep` waits with retry-based HTTP polling helpers (`wait_for_http`, `wait_for_http_auth`); switched build command to `docker buildx build`.
+
+### Fixed
+- **Reproducible Builds**: Pinned `php-rar` extension build to a specific git commit and copied the compiled `rar.so` via a stable intermediate path.
+- **Init Script Safety**: Added `set -e` to the permissions initialization script for fail-fast behavior on errors.
+
 ## [1.2.0] - 2026-06-21
 
 ### Added

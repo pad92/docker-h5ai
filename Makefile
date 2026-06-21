@@ -1,11 +1,48 @@
 IMAGE_NAME = h5ai-local
 TAG = latest
 TEST_HOST ?= localhost
+TEST_RETRIES ?= 15
 
 .PHONY: build test trivy clean
 
+define wait_for_http
+	@SUCCESS=false; \
+	for i in $$(seq 1 $(TEST_RETRIES)); do \
+		if curl -s -I http://$(TEST_HOST):8890/ | grep -q "$(1)"; then \
+			SUCCESS=true; \
+			break; \
+		fi; \
+		sleep 1; \
+	done; \
+	if [ "$$SUCCESS" = "true" ]; then \
+		echo "$(2)"; \
+	else \
+		echo "$(3)"; \
+		docker rm -f $(4); \
+		exit 1; \
+	fi
+endef
+
+define wait_for_http_auth
+	@SUCCESS=false; \
+	for i in $$(seq 1 $(TEST_RETRIES)); do \
+		if curl -s -I -u $(1) http://$(TEST_HOST):8890/ | grep -q "$(2)"; then \
+			SUCCESS=true; \
+			break; \
+		fi; \
+		sleep 1; \
+	done; \
+	if [ "$$SUCCESS" = "true" ]; then \
+		echo "$(3)"; \
+	else \
+		echo "$(4)"; \
+		docker rm -f $(5); \
+		exit 1; \
+	fi
+endef
+
 build:
-	docker build -t $(IMAGE_NAME):$(TAG) .
+	docker buildx build --tag $(IMAGE_NAME):$(TAG) .
 
 trivy: build
 	docker run --rm \
@@ -16,38 +53,18 @@ trivy: build
 test: build
 	@echo "Testing container without authentication..."
 	docker run -d --name h5ai-test-noauth -p 8890:80 -v $(CURDIR):/share:ro $(IMAGE_NAME):$(TAG)
-	@sleep 3
-	@if curl -s -I http://$(TEST_HOST):8890/ | grep -q "HTTP/1.1 200 OK"; then \
-		echo "✓ Public index page returned 200 OK"; \
-	else \
-		echo "✗ Public index page test failed"; \
-		docker rm -f h5ai-test-noauth; \
-		exit 1; \
-	fi
+	$(call wait_for_http,HTTP/1.1 200 OK,✓ Public index page returned 200 OK,✗ Public index page test failed,h5ai-test-noauth)
 	docker rm -f h5ai-test-noauth
 
 	@echo "Testing container with basic authentication..."
 	docker run -d --name h5ai-test-auth -p 8890:80 -e ENV_U=admin -e ENV_P=secret -v $(CURDIR):/share:ro $(IMAGE_NAME):$(TAG)
-	@sleep 3
-	@if curl -s -I http://$(TEST_HOST):8890/ | grep -q "HTTP/1.1 401 Unauthorized"; then \
-		echo "✓ Unauthenticated request correctly blocked (401 Unauthorized)"; \
-	else \
-		echo "✗ Unauthenticated request test failed (did not return 401)"; \
-		docker rm -f h5ai-test-auth; \
-		exit 1; \
-	fi
-	@if curl -s -I -u admin:secret http://$(TEST_HOST):8890/ | grep -q "HTTP/1.1 200 OK"; then \
-		echo "✓ Authenticated request successfully bypassed basic auth"; \
-	else \
-		echo "✗ Authenticated request test failed (rejected credentials)"; \
-		docker rm -f h5ai-test-auth; \
-		exit 1; \
-	fi
+	$(call wait_for_http,HTTP/1.1 401 Unauthorized,✓ Unauthenticated request correctly blocked (401 Unauthorized),✗ Unauthenticated request test failed (did not return 401),h5ai-test-auth)
+	$(call wait_for_http_auth,admin:secret,HTTP/1.1 200 OK,✓ Authenticated request successfully bypassed basic auth,✗ Authenticated request test failed (rejected credentials),h5ai-test-auth)
 	docker rm -f h5ai-test-auth
 
 	@echo "Testing container with h5ai administration password..."
 	docker run -d --name h5ai-test-admin-pass -p 8890:80 -e H5AI_ADMIN_PASSWORD=myadminpassword -v $(CURDIR):/share:ro $(IMAGE_NAME):$(TAG)
-	@sleep 3
+	$(call wait_for_http,HTTP/1.1 200 OK,✓ Container ready,✗ Container failed to start,h5ai-test-admin-pass)
 	@expected_hash=$$(echo -n "myadminpassword" | sha512sum | cut -d' ' -f1); \
 	actual_hash=$$(docker exec h5ai-test-admin-pass cat /usr/share/h5ai/_h5ai/private/conf/options.json | grep -oE '"passhash":[[:space:]]*"[^"]*"' | cut -d'"' -f4); \
 	if [ "$$actual_hash" = "$$expected_hash" ]; then \
@@ -61,7 +78,7 @@ test: build
 
 	@echo "Testing container with generated random h5ai administration password..."
 	docker run -d --name h5ai-test-random-pass -p 8890:80 -v $(CURDIR):/share:ro $(IMAGE_NAME):$(TAG)
-	@sleep 3
+	$(call wait_for_http,HTTP/1.1 200 OK,✓ Container ready,✗ Container failed to start,h5ai-test-random-pass)
 	@generated_pass=$$(docker logs h5ai-test-random-pass 2>&1 | grep "Generated random h5ai administration password" | awk -F': ' '{print $$2}' | tr -d '\r\n'); \
 	if [ -z "$$generated_pass" ]; then \
 		echo "✗ Failed to find generated password in container logs"; \

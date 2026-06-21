@@ -30,13 +30,16 @@ RUN patch -p1 -u -d /h5ai/build/_h5ai/private/php/core/ -i /class-setup.php.patc
     && rm /class-setup.php.patch
 
 # Build php-rar extension from git source because PECL 4.2.0 is incompatible with PHP 8.4 zend_resolve_path API
+ARG PHP_RAR_COMMIT=9c8fcd9ebc9feaf36f945d6d7407fdcd57b7136f
 RUN apk add --no-cache --virtual .build-deps git autoconf g++ make \
     && git clone https://github.com/cataphract/php-rar.git /tmp/php-rar \
     && cd /tmp/php-rar \
+    && git checkout ${PHP_RAR_COMMIT} \
     && phpize \
     && ./configure \
     && make -j$(nproc) \
     && make install \
+    && cp $(php-config --extension-dir)/rar.so /tmp/rar.so \
     && apk del .build-deps \
     && rm -rf /tmp/php-rar
 
@@ -45,7 +48,7 @@ FROM docker.angie.software/angie:1.11.7-minimal
 ARG H5AI_VERSION
 ENV H5AI_VERSION=${H5AI_VERSION}
 ENV S6_KEEP_ENV=1
-ENV S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0
+ENV S6_CMD_WAIT_FOR_SERVICES_MAXTIME=30000
 ENV H5AI_ROOT_PATH=/share
 
 RUN apk upgrade --no-cache && apk add --no-cache \
@@ -77,7 +80,7 @@ RUN apk upgrade --no-cache && apk add --no-cache \
 
 COPY --from=builder /h5ai/build/_h5ai /usr/share/h5ai/_h5ai
 COPY --from=builder /s6-overlay/ /
-COPY --from=builder /usr/local/lib/php/extensions/no-debug-non-zts-20240924/rar.so /usr/lib/php84/modules/rar.so
+COPY --from=builder /tmp/rar.so /usr/lib/php84/modules/rar.so
 
 COPY slash/     /
 

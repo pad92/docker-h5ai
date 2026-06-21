@@ -1,10 +1,11 @@
 #!/command/with-contenv sh
+set -e
 
 # Set permissions for h5ai cache directories
 echo "Setting permissions for h5ai cache directories..."
 mkdir -p /usr/share/h5ai/_h5ai/public/cache /usr/share/h5ai/_h5ai/private/cache
 find /usr/share/h5ai/_h5ai/public/cache /usr/share/h5ai/_h5ai/private/cache \
-    \( ! -user angie -o ! -group www-data \) -exec chown angie:www-data {} +
+    \( ! -user angie -o ! -group angie \) -exec chown angie:angie {} +
 find /usr/share/h5ai/_h5ai/public/cache /usr/share/h5ai/_h5ai/private/cache \
     ! -perm 755 -exec chmod 755 {} +
 
