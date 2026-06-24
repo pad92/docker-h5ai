@@ -43,7 +43,7 @@ RUN apk add --no-cache --virtual .build-deps git autoconf g++ make \
     && apk del .build-deps \
     && rm -rf /tmp/php-rar
 
-FROM docker.angie.software/angie:1.11.7-minimal
+FROM docker.angie.software/angie:1.11.8-minimal
 
 ARG H5AI_VERSION
 ENV H5AI_VERSION=${H5AI_VERSION}
