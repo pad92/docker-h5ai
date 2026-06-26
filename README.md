@@ -57,6 +57,25 @@ docker container run -d -p 80:80 \
 > [!NOTE]
 > If `H5AI_ADMIN_PASSWORD` is not defined (or empty), a cryptographically secure random 32-character password is automatically generated at boot, written to the startup logs, and hashed in `options.json` to keep the info page secure by default.
 
+### Permissions (PUID / PGID)
+
+By default the services (Angie and PHP-FPM) run as the built-in `angie` user
+(`uid 100`). If the files you mount under `/share` are owned by a different
+uid/gid and are not world-readable, h5ai cannot read them and shows an **empty
+listing**. Set `PUID`/`PGID` to the owner of your shared files so the runtime
+account is remapped to match:
+
+```bash
+docker container run -d -p 80:80 \
+  -e PUID=1030 \
+  -e PGID=100 \
+  -v /path/to/sharing-file:/share \
+  pad92/docker-h5ai
+```
+
+- `PUID` / `PGID`: uid/gid the `angie` account is remapped to at startup. When
+  unset, the defaults (`100`/`101`) are kept — fine for world-readable shares.
+
 ### Behind a Reverse Proxy (Real Client IP)
 
 When the container runs behind a reverse proxy, `$remote_addr` (and the access log) would

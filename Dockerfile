@@ -75,6 +75,7 @@ RUN apk upgrade --no-cache && apk add --no-cache \
     php84-xml \
     php84-xmlwriter \
     php84-zip \
+    shadow \
     tzdata \
     zip
 
