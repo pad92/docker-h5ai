@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.4] - 2026-06-26
+
+### Changed
+- **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.2.4`.
+
 ## [1.2.3] - 2026-06-26
 
 ### Changed
