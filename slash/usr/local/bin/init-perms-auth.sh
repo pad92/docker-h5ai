@@ -7,13 +7,29 @@ mkdir -p /usr/share/h5ai/_h5ai/public/cache /usr/share/h5ai/_h5ai/private/cache
 find /usr/share/h5ai/_h5ai/public/cache /usr/share/h5ai/_h5ai/private/cache \
     \( ! -user angie -o ! -group angie \) -exec chown angie:angie {} +
 find /usr/share/h5ai/_h5ai/public/cache /usr/share/h5ai/_h5ai/private/cache \
-    ! -perm 755 -exec chmod 755 {} +
+    -type d ! -perm 755 -exec chmod 755 {} +
+find /usr/share/h5ai/_h5ai/public/cache /usr/share/h5ai/_h5ai/private/cache \
+    -type f ! -perm 644 -exec chmod 644 {} +
+
+# Configure trusted proxies for real client IP (X-Forwarded-For)
+REALIP_CONF=/etc/angie/conf.d/real_ip.conf
+if [ -n "${REAL_IP_FROM}" ]; then
+    echo "Configuring trusted proxies (real_ip): ${REAL_IP_FROM}"
+    : > "${REALIP_CONF}"
+    # REAL_IP_FROM accepts a comma- or space-separated list of CIDRs/IPs
+    echo "${REAL_IP_FROM}" | tr ',' ' ' | xargs -n1 | while read -r cidr; do
+        [ -n "${cidr}" ] && echo "set_real_ip_from ${cidr};" >> "${REALIP_CONF}"
+    done
+    echo "real_ip_header ${REAL_IP_HEADER:-X-Forwarded-For};" >> "${REALIP_CONF}"
+    echo "real_ip_recursive on;" >> "${REALIP_CONF}"
+else
+    rm -f "${REALIP_CONF}"
+fi
 
 # Handle basic auth
 if [ -n "${ENV_U}" ] && [ -n "${ENV_P}" ]; then
     echo "Configuring basic authentication..."
-    /usr/bin/htpasswd -cb /etc/angie/.htpasswd "${ENV_U}" "${ENV_P}" >/dev/null 2>&1
-    if [ $? -eq 0 ]; then
+    if /usr/bin/htpasswd -cb /etc/angie/.htpasswd "${ENV_U}" "${ENV_P}" >/dev/null 2>&1; then
         sed -i 's/#auth_/auth_/g' /etc/angie/angie.conf
     fi
 fi

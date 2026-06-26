@@ -42,7 +42,7 @@ define wait_for_http_auth
 endef
 
 build:
-	docker buildx build --tag $(IMAGE_NAME):$(TAG) .
+	docker buildx build --load --tag $(IMAGE_NAME):$(TAG) .
 
 trivy: build
 	docker run --rm \
@@ -96,8 +96,42 @@ test: build
 	fi
 	docker rm -f h5ai-test-random-pass
 
+	@echo "Testing container health check with basic authentication enabled..."
+	docker run -d --name h5ai-test-health -p 8890:80 -e ENV_U=admin -e ENV_P=secret \
+		--health-interval=2s --health-timeout=5s --health-retries=3 --health-start-period=2s \
+		-v $(CURDIR):/share:ro $(IMAGE_NAME):$(TAG)
+	@SUCCESS=false; \
+	for i in $$(seq 1 $(TEST_RETRIES)); do \
+		status=$$(docker inspect --format '{{.State.Health.Status}}' h5ai-test-health 2>/dev/null); \
+		if [ "$$status" = "healthy" ]; then SUCCESS=true; break; fi; \
+		sleep 2; \
+	done; \
+	if [ "$$SUCCESS" = "true" ]; then \
+		echo "✓ Container reports healthy despite basic auth returning 401"; \
+	else \
+		echo "✗ Health check test failed (last status: $$status)"; \
+		docker rm -f h5ai-test-health; \
+		exit 1; \
+	fi
+	docker rm -f h5ai-test-health
+
+	@echo "Testing container with real_ip (trusted proxy) configuration..."
+	docker run -d --name h5ai-test-realip -p 8890:80 -e REAL_IP_FROM="10.0.0.0/8, 192.168.0.0/16" -v $(CURDIR):/share:ro $(IMAGE_NAME):$(TAG)
+	$(call wait_for_http,HTTP/1.1 200 OK,✓ Container ready,✗ Container failed to start,h5ai-test-realip)
+	@realip_conf=$$(docker exec h5ai-test-realip cat /etc/angie/conf.d/real_ip.conf 2>/dev/null); \
+	if echo "$$realip_conf" | grep -q "set_real_ip_from 10.0.0.0/8;" \
+		&& echo "$$realip_conf" | grep -q "set_real_ip_from 192.168.0.0/16;" \
+		&& echo "$$realip_conf" | grep -q "real_ip_header X-Forwarded-For;"; then \
+		echo "✓ real_ip configuration correctly generated from REAL_IP_FROM"; \
+	else \
+		echo "✗ real_ip configuration test failed. Got:"; echo "$$realip_conf"; \
+		docker rm -f h5ai-test-realip; \
+		exit 1; \
+	fi
+	docker rm -f h5ai-test-realip
+
 	@echo "All tests passed successfully!"
 
 clean:
-	docker rm -f h5ai-test-auth h5ai-test-noauth h5ai-test-admin-pass h5ai-test-random-pass 2>/dev/null || true
+	docker rm -f h5ai-test-auth h5ai-test-noauth h5ai-test-admin-pass h5ai-test-random-pass h5ai-test-health h5ai-test-realip 2>/dev/null || true
 	docker rmi $(IMAGE_NAME):$(TAG) 2>/dev/null || true

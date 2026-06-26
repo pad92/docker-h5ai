@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.2] - 2026-06-26
+
+### Added
+- **Real Client IP Behind Reverse Proxy**: Added the `REAL_IP_FROM` (and optional `REAL_IP_HEADER`, default `X-Forwarded-For`) environment variables to declare trusted proxies. When set, an `/etc/angie/conf.d/real_ip.conf` is generated at startup with `set_real_ip_from` directives so Angie substitutes the real client IP from the forwarded header.
+- **`php` Command Symlink**: Symlinked `/usr/bin/php` to `php84` so tooling that invokes `php` directly resolves correctly.
+
+### Changed
+- **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.2.2`.
+- **Access Log Format**: Switched the Angie access log to a `vhost_combined`-style format (vhost prefix `$host:$server_port`, `$remote_addr` as the first field) while preserving the `X-Forwarded-For` value and the existing upstream/timing fields.
+- **PHP-FPM Hardening**: Set `clear_env = yes` so container environment variables (including secrets such as `ENV_P` and `H5AI_ADMIN_PASSWORD`) are no longer exposed to PHP worker processes.
+- **Cache Permissions**: Refined the startup permission fixup to apply `755` to directories and `644` to files, instead of `755` across everything.
+- **Makefile**: Added `--load` to `docker buildx build` so the built image is available to the local Docker store; added `make test` cases covering the health check with basic auth enabled and the `REAL_IP_FROM` configuration.
+
+### Fixed
+- **Health Check With Basic Authentication**: The `HEALTHCHECK` no longer marks the container as `unhealthy` when basic auth is enabled — it now treats both `200` and `401` as healthy while still failing when Angie is unreachable.
+- **Init Script Logic**: Removed a no-op `$?` check after `htpasswd` (dead code under `set -e`) by guarding the command directly with the conditional.
+
 ## [1.2.0-1] - 2026-06-21
 
 ### Changed

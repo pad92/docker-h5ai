@@ -1,4 +1,4 @@
-ARG H5AI_VERSION=1.2.0
+ARG H5AI_VERSION=1.2.2
 
 FROM php:8.4-alpine AS builder
 
@@ -84,7 +84,9 @@ COPY --from=builder /tmp/rar.so /usr/lib/php84/modules/rar.so
 
 COPY slash/     /
 
-RUN ln -sf /dev/stderr /var/log/php84/error.log \
+RUN ln -sf "$(command -v php84)" /usr/bin/php \
+    && mkdir -p /etc/angie/conf.d \
+    && ln -sf /dev/stderr /var/log/php84/error.log \
     && ln -sf /dev/stdout /var/log/angie/access.log \
     && ln -sf /dev/stderr /var/log/angie/error.log \
     && chmod +x /etc/s6-overlay/s6-rc.d/init-perms-auth/up \
@@ -109,4 +111,6 @@ LABEL maintainer="pad92" \
 EXPOSE 80
 
 ENTRYPOINT ["/init"]
-HEALTHCHECK CMD curl -I --fail http://localhost/ || exit 1
+# Accept 200 (open) and 401 (basic auth enabled) as healthy; fail only if Angie is unreachable
+HEALTHCHECK CMD code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost/) \
+    && { [ "$code" = 200 ] || [ "$code" = 401 ]; } || exit 1

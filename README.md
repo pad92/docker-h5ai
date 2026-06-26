@@ -57,6 +57,27 @@ docker container run -d -p 80:80 \
 > [!NOTE]
 > If `H5AI_ADMIN_PASSWORD` is not defined (or empty), a cryptographically secure random 32-character password is automatically generated at boot, written to the startup logs, and hashed in `options.json` to keep the info page secure by default.
 
+### Behind a Reverse Proxy (Real Client IP)
+
+When the container runs behind a reverse proxy, `$remote_addr` (and the access log) would
+otherwise show the proxy's IP. Set `REAL_IP_FROM` to the trusted proxy network(s) so Angie
+substitutes the real client IP from the `X-Forwarded-For` header:
+
+```bash
+docker container run -d -p 80:80 \
+  -e REAL_IP_FROM="10.0.0.0/8, 192.168.0.0/16" \
+  -v /path/to/sharing-file:/share \
+  pad92/docker-h5ai
+```
+
+- `REAL_IP_FROM`: comma- or space-separated list of trusted proxy IPs/CIDRs. When unset, the
+  feature is disabled.
+- `REAL_IP_HEADER` (optional): header carrying the client IP, defaults to `X-Forwarded-For`.
+
+> [!WARNING]
+> Only enable this for proxies you trust. `X-Forwarded-For` can be spoofed by any client that
+> reaches Angie directly, so listing untrusted networks lets clients forge their logged IP.
+
 ### With Custom h5ai Options
 
 To override the default [options.json](https://raw.githubusercontent.com/lrsjng/h5ai/v0.29.0/src/_h5ai/private/conf/options.json) file, mount your custom file into `/usr/share/h5ai/_h5ai/private/conf/options.json`:
@@ -86,7 +107,7 @@ docker container run -d -p 80:80 \
 ```
 
 > [!NOTE]
-> Upon container startup, an s6-overlay initialization task automatically ensures that the cache directories have the correct ownership (`angie:www-data`) and permissions (`755`) so that the PHP process can write to them.
+> Upon container startup, an s6-overlay initialization task automatically ensures that the cache directories have the correct ownership (`angie:angie`) and permissions (`755` for directories, `644` for files) so that the PHP process can write to them.
 
 
 ---
