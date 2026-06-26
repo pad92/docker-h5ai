@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.3] - 2026-06-26
+
+### Changed
+- **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.2.3`.
+- **Content-Security-Policy**: Relaxed the CSP to support h5ai's WebAssembly-based features and media previews — added `'wasm-unsafe-eval'` to `script-src`, introduced `worker-src 'self' blob:` and `media-src 'self' blob:`.
+
+## [1.2.2-1] - 2026-06-26
+
+### Added
+- **PUID/PGID Remapping**: Added `PUID`/`PGID` support so the runtime `angie` account is remapped at startup (via `usermod`/`groupmod -o`) to match the owner of bind-mounted shares. This prevents h5ai from silently hiding all entries (`hideIf403`) when shares are owned by a different uid/gid. Requires the newly added `shadow` package.
+
+### Changed
+- **Angie Upgrade**: Updated Angie to version `1.11.8`.
+- **Angie Worker User**: Added `user angie;` to `angie.conf` so Angie workers run under the same account as php-fpm, ensuring direct file downloads also benefit from the PUID/PGID remapping.
+
+### Fixed
+- **Empty Listing Behind `clear_env`**: `clear_env = yes` in `php-fpm.conf` stripped `H5AI_ROOT_PATH` from worker environments, causing h5ai to fall back to the wrong directory and show an empty listing. Fixed by passing `env[H5AI_ROOT_PATH]` explicitly through `php-fpm.conf`.
+
 ## [1.2.2] - 2026-06-26
 
 ### Added
