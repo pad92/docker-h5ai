@@ -1,6 +1,20 @@
 #!/command/with-contenv sh
 set -e
 
+# Remap the runtime account "angie" to the host-provided PUID/PGID so the
+# services can read bind-mounted shares owned by that uid/gid. Both php-fpm
+# (directory indexing) and Angie workers (direct file downloads) run as
+# "angie", so remapping the account covers the whole request path.
+# -o allows non-unique ids (e.g. PGID=100 already used by the "users" group).
+if [ -n "${PGID}" ] && [ "${PGID}" != "$(id -g angie)" ]; then
+    echo "Remapping group 'angie' -> GID ${PGID}"
+    groupmod -o -g "${PGID}" angie
+fi
+if [ -n "${PUID}" ] && [ "${PUID}" != "$(id -u angie)" ]; then
+    echo "Remapping user 'angie' -> UID ${PUID}"
+    usermod -o -u "${PUID}" angie
+fi
+
 # Set permissions for h5ai cache directories
 echo "Setting permissions for h5ai cache directories..."
 mkdir -p /usr/share/h5ai/_h5ai/public/cache /usr/share/h5ai/_h5ai/private/cache
