@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- **Makefile Test**: Added a `make test` case covering a bind-mounted custom `options.json` (regression test for the startup failure below).
+
+### Fixed
+- **Bind-Mounted `options.json` Broke Startup**: the startup script rewrote the h5ai admin `passhash` with `sed -i`, whose rename fails (`EBUSY`) on a single-file bind mount; with `set -e` the init oneshot aborted and neither Angie nor PHP-FPM started. The file is now rewritten in place (temp file + `cat`). A read-only mounted `options.json` keeps its existing `passhash`; combining it with `H5AI_ADMIN_PASSWORD` aborts startup with an explicit error.
+- **Basic Auth Fail-Open**: an `htpasswd` failure was silently ignored and the container started **without** the authentication requested through `ENV_U`/`ENV_P`. Startup now aborts with the `htpasswd` error instead (fail closed).
+
 ## [1.2.4] - 2026-06-26
 
 ### Changed
