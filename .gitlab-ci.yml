@@ -33,7 +33,7 @@ build:
     - docker run --privileged --rm tonistiigi/binfmt --install all || true
     - docker buildx create --name $BUILDER_NAME --use
     # Log in to GitLab Container Registry to push cache
-    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
     # Build local single-platform image and push build cache
     - |
       docker buildx build \
@@ -144,7 +144,7 @@ scan:trivy:
   script:
     - docker run --privileged --rm tonistiigi/binfmt --install all || true
     - docker buildx create --name $BUILDER_NAME --use
-    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
     - |
       if [ -n "$PUBLISH_REGISTRY_LOGIN_CMD" ]; then
         eval "$PUBLISH_REGISTRY_LOGIN_CMD"
@@ -219,11 +219,14 @@ create_release:
       # Use sed to extract from the line containing the version header until the next header
       sed -n "/## \[$CLEAN_VERSION\]/,/## \[/p" CHANGELOG.md > release_notes.txt
 
-      # Remove the last line (which is the start of the next version) if it exists
-      # and remove the first line (the header itself)
+      # Remove the first line (the header itself)
       sed -i '1d' release_notes.txt
-      # Remove the last line if it matches the start of another version header
-      sed -i '$d' release_notes.txt
+      # Remove the trailing line only when it is the next version header:
+      # the oldest section has no following header, so deleting the last
+      # line unconditionally would eat real content there.
+      if [ -s release_notes.txt ] && tail -n 1 release_notes.txt | grep -q '^## \['; then
+        sed -i '$d' release_notes.txt
+      fi
 
       # If the file is empty, provide a default message
       if [ ! -s release_notes.txt ]; then
