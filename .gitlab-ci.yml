@@ -12,6 +12,10 @@ default:
 
 variables:
   IMAGE_NAME: pad92/docker-h5ai
+  # Multi-platform candidate pushed by `build` on publishing pipelines
+  # (main/tag), scanned by Trivy, then promoted digest-for-digest by the
+  # publish jobs. Configure a registry cleanup policy for `ci-*` tags.
+  CANDIDATE_IMAGE: "$CI_REGISTRY_IMAGE:ci-$CI_COMMIT_SHORT_SHA"
 
 lint:dockerfile:
   stage: lint
@@ -38,16 +42,38 @@ build:
     - |
       docker buildx build \
         --load \
+        --pull \
         -t h5ai-local:latest \
         --cache-from "type=registry,ref=$CI_REGISTRY_IMAGE:cache" \
         --cache-to "type=registry,ref=$CI_REGISTRY_IMAGE:cache,mode=max" \
         .
     - docker save -o image.tar h5ai-local:latest
+    # On publishing pipelines, also push the multi-platform candidate: the
+    # scan stage scans this exact image and the publish stage only promotes
+    # its digest, so what reaches the registries is what was scanned. The
+    # digest is exported (dotenv) so later stages pin it instead of the tag,
+    # which a concurrent pipeline or job retry could repoint.
+    - |
+      if [ "$CI_COMMIT_BRANCH" = "main" ] || [ -n "$CI_COMMIT_TAG" ]; then
+        docker buildx build \
+          --platform linux/amd64,linux/arm64 \
+          --push \
+          -t "$CANDIDATE_IMAGE" \
+          --cache-from "type=registry,ref=$CI_REGISTRY_IMAGE:cache" \
+          .
+        CANDIDATE_DIGEST=$(docker buildx imagetools inspect "$CANDIDATE_IMAGE" --format '{{.Manifest.Digest}}')
+        echo "CANDIDATE_DIGEST=$CANDIDATE_DIGEST" > build.env
+        echo "Candidate pushed: $CI_REGISTRY_IMAGE@$CANDIDATE_DIGEST"
+      else
+        : > build.env
+      fi
   after_script:
     - docker buildx rm $BUILDER_NAME || true
   artifacts:
     paths:
       - image.tar
+    reports:
+      dotenv: build.env
     expire_in: 1 day
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -130,20 +156,36 @@ scan:trivy:
     name: aquasec/trivy:latest
     entrypoint: [""]
   script:
-    - trivy image --input image.tar --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed
+    # On publishing pipelines, scan the multi-platform candidate pushed to
+    # the registry — the exact digests the publish stage promotes — for both
+    # platforms. On MR/branch pipelines, scan the local build artifact.
+    - |
+      if [ "$CI_COMMIT_BRANCH" = "main" ] || [ -n "$CI_COMMIT_TAG" ]; then
+        if [ -z "$CANDIDATE_DIGEST" ]; then
+          echo "ERROR: CANDIDATE_DIGEST not exported by the build stage" >&2
+          exit 1
+        fi
+        export TRIVY_USERNAME="$CI_REGISTRY_USER"
+        export TRIVY_PASSWORD="$CI_REGISTRY_PASSWORD"
+        for platform in linux/amd64 linux/arm64; do
+          echo "Scanning $CI_REGISTRY_IMAGE@$CANDIDATE_DIGEST ($platform)..."
+          trivy image --platform "$platform" --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed "$CI_REGISTRY_IMAGE@$CANDIDATE_DIGEST"
+        done
+      else
+        trivy image --input image.tar --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed
+      fi
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH
     - if: $CI_COMMIT_TAG
 
+# Publishing does not rebuild: it promotes the scanned candidate's digest to
+# the final tags with `docker buildx imagetools create`, so the published
+# images are bit-identical to what the scan stage validated.
 .publish-template:
   stage: publish
   image: docker:28
-  variables:
-    BUILDER_NAME: "builder-$CI_JOB_ID"
   script:
-    - docker run --privileged --rm tonistiigi/binfmt --install all || true
-    - docker buildx create --name $BUILDER_NAME --use
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
     - |
       if [ -n "$PUBLISH_REGISTRY_LOGIN_CMD" ]; then
@@ -172,16 +214,18 @@ scan:trivy:
         add_tag "devel"
       fi
 
-      echo "Building and pushing multi-platform images to $PUBLISH_IMAGE with tags: $TAGS_ARGS"
-      docker buildx build \
-        --platform linux/amd64,linux/arm64 \
-        --pull \
-        $TAGS_ARGS \
-        --push \
-        --cache-from "type=registry,ref=$CI_REGISTRY_IMAGE:cache" \
-        .
-  after_script:
-    - docker buildx rm $BUILDER_NAME || true
+      if [ -z "$TAGS_ARGS" ]; then
+        echo "No tags to publish for this pipeline"
+        exit 0
+      fi
+
+      if [ -z "$CANDIDATE_DIGEST" ]; then
+        echo "ERROR: CANDIDATE_DIGEST not exported by the build stage, refusing to publish an unscanned image" >&2
+        exit 1
+      fi
+
+      echo "Promoting scanned candidate $CI_REGISTRY_IMAGE@$CANDIDATE_DIGEST to: $TAGS_ARGS"
+      docker buildx imagetools create $TAGS_ARGS "$CI_REGISTRY_IMAGE@$CANDIDATE_DIGEST"
 
 publish:gitlab:
   extends: .publish-template

@@ -17,6 +17,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - **Healthcheck Hardening**: added explicit `HEALTHCHECK` parameters (`--interval=30s --timeout=10s --start-period=15s --retries=3`) and a 5 s curl timeout (`-m 5`).
 - **CI Registry Logins**: switched the GitLab registry `docker login` calls to `--password-stdin` so the password no longer appears in process arguments.
+- **Trivy Scan Gates the Published Digest**: on `main`/tag pipelines the build stage pushes a multi-platform candidate (`ci-<sha>`) to the GitLab registry and exports its manifest digest, Trivy scans both `linux/amd64` and `linux/arm64` of that pinned digest, and the publish jobs promote the same digest to the final tags with `docker buildx imagetools create` instead of rebuilding — the published images are bit-identical to what was scanned, and publishing fails closed if the digest is missing. MR/branch pipelines keep scanning the local build artifact.
 
 ## [1.2.4] - 2026-06-26
 
