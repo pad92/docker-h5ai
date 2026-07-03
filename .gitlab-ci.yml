@@ -12,37 +12,55 @@ default:
 
 variables:
   IMAGE_NAME: pad92/docker-h5ai
-  # Multi-platform candidate pushed by `build` on publishing pipelines
-  # (main/tag), scanned by Trivy, then promoted digest-for-digest by the
-  # publish jobs. Configure a registry cleanup policy for `ci-*` tags.
+  # Multi-platform candidate pushed by `build:candidate` on every pipeline,
+  # scanned by Trivy, then promoted digest-for-digest by the publish jobs.
+  # Configure a registry cleanup policy for `ci-*` tags.
   CANDIDATE_IMAGE: "$CI_REGISTRY_IMAGE:ci-$CI_COMMIT_SHORT_SHA"
+
+.pipeline-rules: &pipeline_rules
+  - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  - if: $CI_COMMIT_BRANCH
+  - if: $CI_COMMIT_TAG
+
+.publish-rules: &publish_rules
+  - if: $CI_COMMIT_BRANCH == "main"
+  - if: $CI_COMMIT_TAG
+
+.dockerhub-publish-rules: &dockerhub_publish_rules
+  - if: $CI_COMMIT_BRANCH == "main" && $DOCKERHUB_USERNAME && $DOCKERHUB_PASSWORD
+  - if: $CI_COMMIT_TAG && $DOCKERHUB_USERNAME && $DOCKERHUB_PASSWORD
+
+.docker-build-base:
+  image: docker:28
+  variables:
+    BUILDER_NAME: "builder-$CI_JOB_ID"
+  # binfmt install/uninstall below mutates the shared runner host; serialize
+  # every job extending this base (build:image and build:candidate run in
+  # the same stage, i.e. in parallel) so they cannot race each other's QEMU
+  # registration.
+  resource_group: docker-build
+  before_script:
+    # Set up QEMU and Docker Buildx once for all build variants.
+    - docker run --privileged --rm tonistiigi/binfmt --uninstall qemu-* || true
+    - docker run --privileged --rm tonistiigi/binfmt --install all || true
+    - docker buildx create --name $BUILDER_NAME --use --bootstrap
+    # Log in once so both cache access and pushes work.
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+  after_script:
+    - docker buildx rm $BUILDER_NAME || true
+  rules: *pipeline_rules
 
 lint:dockerfile:
   stage: lint
   image: hadolint/hadolint:latest-alpine
   script:
     - hadolint --failure-threshold error Dockerfile
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH
-    - if: $CI_COMMIT_TAG
+  rules: *pipeline_rules
 
-build:
+build:image:
+  extends: .docker-build-base
   stage: build
-  image: docker:28
-  variables:
-    BUILDER_NAME: "builder-$CI_JOB_ID"
-  # binfmt install/uninstall below mutates the shared runner host; serialize
-  # builds on this runner so concurrent pipelines cannot race each other's
-  # QEMU registration.
-  resource_group: docker-build
   script:
-    # Set up QEMU for multi-platform build compatibility
-    - docker run --privileged --rm tonistiigi/binfmt --uninstall qemu-* || true
-    - docker run --privileged --rm tonistiigi/binfmt --install all || true
-    - docker buildx create --name $BUILDER_NAME --use --bootstrap
-    # Log in to GitLab Container Registry to push cache
-    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
     # Build local single-platform image and push build cache
     - |
       docker buildx build \
@@ -53,42 +71,40 @@ build:
         --cache-to "type=registry,ref=$CI_REGISTRY_IMAGE:cache,mode=max" \
         .
     - docker save -o image.tar h5ai-local:latest
-    # On publishing pipelines, also push the multi-platform candidate: the
-    # scan stage scans this exact image and the publish stage only promotes
-    # its digest, so what reaches the registries is what was scanned. The
-    # digest is exported (dotenv) so later stages pin it instead of the tag,
-    # which a concurrent pipeline or job retry could repoint.
-    - |
-      if [ "$CI_COMMIT_BRANCH" = "main" ] || [ -n "$CI_COMMIT_TAG" ]; then
-        docker buildx build \
-          --platform linux/amd64,linux/arm64 \
-          --push \
-          -t "$CANDIDATE_IMAGE" \
-          --cache-from "type=registry,ref=$CI_REGISTRY_IMAGE:cache" \
-          --cache-to "type=registry,ref=$CI_REGISTRY_IMAGE:cache,mode=max" \
-          --metadata-file metadata.json \
-          .
-        CANDIDATE_DIGEST=$(grep -o '"containerimage.digest":[[:space:]]*"sha256:[a-f0-9]\{64\}"' metadata.json | grep -o 'sha256:[a-f0-9]\{64\}' | cut -d: -f2)
-        echo "CANDIDATE_DIGEST=${CANDIDATE_DIGEST:-none}" > build.env
-        echo "Candidate pushed: $CI_REGISTRY_IMAGE@sha256:${CANDIDATE_DIGEST:-none}"
-      else
-        echo "CANDIDATE_DIGEST=none" > build.env
-      fi
-  after_script:
-    - docker buildx rm $BUILDER_NAME || true
   artifacts:
     paths:
       - image.tar
-      - build.env
     expire_in: 1 day
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH
-    - if: $CI_COMMIT_TAG
+
+build:candidate:
+  extends: .docker-build-base
+  stage: build
+  script:
+    # Push the registry candidate on every pipeline so scan/publish can pin
+    # the exact digest they consume.
+    - |
+      docker buildx build \
+        --platform linux/amd64,linux/arm64 \
+        --push \
+        --metadata-file build-metadata.json \
+        -t "$CANDIDATE_IMAGE" \
+        --cache-from "type=registry,ref=$CI_REGISTRY_IMAGE:cache" \
+        .
+      CANDIDATE_DIGEST=$(sed -n 's/.*"containerimage.digest":"\([^"]*\)".*/\1/p' build-metadata.json | head -n1)
+      printf 'CANDIDATE_DIGEST=%s\n' "${CANDIDATE_DIGEST:-none}" > build.env
+      echo "Candidate pushed: $CANDIDATE_IMAGE@${CANDIDATE_DIGEST:-none}"
+      rm -f build-metadata.json
+  artifacts:
+    reports:
+      dotenv: build.env
+    expire_in: 1 day
 
 test:
   stage: test
   image: docker:28
+  needs:
+    - job: build:image
+      artifacts: true
   before_script:
     - apk add --no-cache curl
   script:
@@ -151,43 +167,30 @@ test:
       fi
     - docker rm -f h5ai-test-auth
     - echo "All tests passed successfully!"
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH
-    - if: $CI_COMMIT_TAG
+  rules: *pipeline_rules
 
 scan:trivy:
   stage: scan
+  needs:
+    - job: build:candidate
+      artifacts: true
   image:
     name: aquasec/trivy:latest
     entrypoint: [""]
   script:
-    # On publishing pipelines, scan the multi-platform candidate pushed to
-    # the registry — the exact digests the publish stage promotes — for both
-    # platforms. On MR/branch pipelines, scan the local build artifact.
     - |
-      if [ -f build.env ]; then
-        . ./build.env
+      if [ -z "$CANDIDATE_DIGEST" ] || [ "$CANDIDATE_DIGEST" = "none" ]; then
+        echo "ERROR: CANDIDATE_DIGEST not exported by the build stage" >&2
+        exit 1
       fi
-    - |
-      if [ "$CI_COMMIT_BRANCH" = "main" ] || [ -n "$CI_COMMIT_TAG" ]; then
-        if [ -z "$CANDIDATE_DIGEST" ] || [ "$CANDIDATE_DIGEST" = "none" ]; then
-          echo "ERROR: CANDIDATE_DIGEST not exported by the build stage" >&2
-          exit 1
-        fi
-        export TRIVY_USERNAME="$CI_REGISTRY_USER"
-        export TRIVY_PASSWORD="$CI_REGISTRY_PASSWORD"
-        for platform in linux/amd64 linux/arm64; do
-          echo "Scanning $CI_REGISTRY_IMAGE@sha256:$CANDIDATE_DIGEST ($platform)..."
-          trivy image --platform "$platform" --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed "$CI_REGISTRY_IMAGE@sha256:$CANDIDATE_DIGEST"
-        done
-      else
-        trivy image --input image.tar --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed
-      fi
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH
-    - if: $CI_COMMIT_TAG
+      CANDIDATE_REF="$CANDIDATE_IMAGE@$CANDIDATE_DIGEST"
+      export TRIVY_USERNAME="$CI_REGISTRY_USER"
+      export TRIVY_PASSWORD="$CI_REGISTRY_PASSWORD"
+      for platform in linux/amd64 linux/arm64; do
+        echo "Scanning $CANDIDATE_REF ($platform)..."
+        trivy image --platform "$platform" --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed "$CANDIDATE_REF"
+      done
+  rules: *pipeline_rules
 
 # Publishing does not rebuild: it promotes the scanned candidate's digest to
 # the final tags with `docker buildx imagetools create`, so the published
@@ -195,14 +198,10 @@ scan:trivy:
 .publish-template:
   stage: publish
   image: docker:28
-  # Promotion only needs the exported digest, not the local image.tar artifact.
-  dependencies:
-    - build
+  needs:
+    - job: build:candidate
+      artifacts: true
   script:
-    - |
-      if [ -f build.env ]; then
-        . ./build.env
-      fi
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
     - |
       if [ -n "$PUBLISH_REGISTRY_LOGIN_CMD" ]; then
@@ -240,26 +239,23 @@ scan:trivy:
         echo "ERROR: CANDIDATE_DIGEST not exported by the build stage, refusing to publish an unscanned image" >&2
         exit 1
       fi
+      CANDIDATE_REF="$CANDIDATE_IMAGE@$CANDIDATE_DIGEST"
 
-      echo "Promoting scanned candidate $CI_REGISTRY_IMAGE@sha256:$CANDIDATE_DIGEST to: $TAGS_ARGS"
-      docker buildx imagetools create $TAGS_ARGS "$CI_REGISTRY_IMAGE@sha256:$CANDIDATE_DIGEST"
+      echo "Promoting scanned candidate $CANDIDATE_REF to: $TAGS_ARGS"
+      docker buildx imagetools create $TAGS_ARGS "$CANDIDATE_REF"
 
 publish:gitlab:
   extends: .publish-template
   variables:
     PUBLISH_IMAGE: "$CI_REGISTRY_IMAGE"
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-    - if: $CI_COMMIT_TAG
+  rules: *publish_rules
 
 publish:dockerhub:
   extends: .publish-template
   variables:
     PUBLISH_IMAGE: "docker.io/$IMAGE_NAME"
     PUBLISH_REGISTRY_LOGIN_CMD: 'echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin docker.io'
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main" && $DOCKERHUB_USERNAME && $DOCKERHUB_PASSWORD
-    - if: $CI_COMMIT_TAG && $DOCKERHUB_USERNAME && $DOCKERHUB_PASSWORD
+  rules: *dockerhub_publish_rules
 
 create_release:
   stage: release
