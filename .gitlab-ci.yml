@@ -90,7 +90,7 @@ build:candidate:
         -t "$CANDIDATE_IMAGE" \
         --cache-from "type=registry,ref=$CI_REGISTRY_IMAGE:cache" \
         .
-      CANDIDATE_DIGEST=$(sed -n 's/.*"containerimage.digest":"\([^"]*\)".*/\1/p' build-metadata.json | head -n1)
+      CANDIDATE_DIGEST=$(sed -n 's/.*"containerimage\.digest"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' build-metadata.json | head -n1)
       printf 'CANDIDATE_DIGEST=%s\n' "${CANDIDATE_DIGEST:-none}" > build.env
       echo "Candidate pushed: $CANDIDATE_IMAGE@${CANDIDATE_DIGEST:-none}"
       rm -f build-metadata.json
