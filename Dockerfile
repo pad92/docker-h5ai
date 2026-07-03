@@ -11,7 +11,7 @@ ARG TARGETARCH
 RUN case "${TARGETARCH}" in \
     "amd64") S6_ARCH="x86_64" ;; \
     "arm64") S6_ARCH="aarch64" ;; \
-    *) S6_ARCH="x86_64" ;; \
+    *) echo "Unsupported TARGETARCH: '${TARGETARCH}'" >&2; exit 1 ;; \
     esac \
     && apk add --no-cache curl patch unzip xz \
     && curl -L -o /tmp/h5ai.zip "https://gitlab.com/api/v4/projects/83496424/packages/generic/h5ai/${H5AI_VERSION}/h5ai-${H5AI_VERSION}.zip" \
@@ -113,5 +113,6 @@ EXPOSE 80
 
 ENTRYPOINT ["/init"]
 # Accept 200 (open) and 401 (basic auth enabled) as healthy; fail only if Angie is unreachable
-HEALTHCHECK CMD code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost/) \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD code=$(curl -s -m 5 -o /dev/null -w '%{http_code}' http://localhost/) \
     && { [ "$code" = 200 ] || [ "$code" = 401 ]; } || exit 1
