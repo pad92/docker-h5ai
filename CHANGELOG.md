@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **User docker-compose Example**: Added a ready-to-use `docker-compose.yml` example (image `pad92/docker-h5ai:latest`); the previous development compose file was renamed to `docker-compose.dev.yml`.
 - **Makefile Test**: Added a `make test` case covering a bind-mounted custom `options.json` (regression test for the startup failure below).
 
 ### Fixed

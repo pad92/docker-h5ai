@@ -1,19 +1,26 @@
+# Example deployment for end users. See README.md for the full list of
+# supported environment variables. For local development use
+# docker-compose.dev.yml instead.
 services:
-  h5ai-devel:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: h5ai-devel
+  h5ai:
+    image: pad92/docker-h5ai:latest
     ports:
-      - 8888:80
+      - "8888:80"
+    environment:
+      # Basic authentication protecting the listing and file downloads
+      - ENV_U=admin
+      - ENV_P=mysecretpassword
+      # Password of the h5ai info/administration page. If unset, a random
+      # one is generated and printed to the container logs at startup.
+      - H5AI_ADMIN_PASSWORD=myadminpassword
+      # Remap the runtime account to the owner of your shared files
+      # - PUID=1000
+      # - PGID=1000
+      # Trusted reverse proxies for real client IP (X-Forwarded-For)
+      # - REAL_IP_FROM=10.0.0.0/8, 192.168.0.0/16
     volumes:
-      - ./../h5ai/build/_h5ai:/usr/share/h5ai/_h5ai
-      - .:/share/src:ro
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 1G
-        reservations:
-          cpus: '0.25'
-          memory: 256M
+      - /path/to/sharing-file:/share:ro
+      # Persist thumbnails/metadata across container recreations (optional)
+      # - /path/to/public-cache:/usr/share/h5ai/_h5ai/public/cache
+      # - /path/to/private-cache:/usr/share/h5ai/_h5ai/private/cache
+    restart: unless-stopped

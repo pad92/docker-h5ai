@@ -138,7 +138,8 @@ docker container run -d -p 80:80 \
 
 ## Docker Compose Example
 
-Create a `docker-compose.yml` file:
+A ready-to-use example is provided in [docker-compose.yml](docker-compose.yml)
+(`docker-compose.dev.yml` is the development harness). Minimal version:
 
 ```yaml
 services:
