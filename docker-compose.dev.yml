@@ -1,0 +1,19 @@
+services:
+  h5ai-devel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: h5ai-devel
+    ports:
+      - 8888:80
+    volumes:
+      - ./../h5ai/build/_h5ai:/usr/share/h5ai/_h5ai
+      - .:/share/src:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M

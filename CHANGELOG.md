@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.5] - 2026-07-03
+
+### Added
+- **User docker-compose Example**: Added a ready-to-use `docker-compose.yml` example (image `pad92/docker-h5ai:latest`); the previous development compose file was renamed to `docker-compose.dev.yml`.
+- **Makefile Test**: Added a `make test` case covering a bind-mounted custom `options.json` (regression test for the startup failure below).
+
+### Fixed
+- **Bind-Mounted `options.json` Broke Startup**: the startup script rewrote the h5ai admin `passhash` with `sed -i`, whose rename fails (`EBUSY`) on a single-file bind mount; with `set -e` the init oneshot aborted and neither Angie nor PHP-FPM started. The file is now rewritten in place (temp file + `cat`). A read-only mounted `options.json` keeps its existing `passhash`; combining it with `H5AI_ADMIN_PASSWORD` aborts startup with an explicit error.
+- **Basic Auth Fail-Open**: an `htpasswd` failure was silently ignored and the container started **without** the authentication requested through `ENV_U`/`ENV_P`. Startup now aborts with the `htpasswd` error instead (fail closed).
+- **Unsupported Build Architecture**: the Dockerfile silently fell back to `x86_64` s6-overlay binaries for unknown `TARGETARCH` values; the build now fails explicitly.
+- **Release Notes Extraction**: the CI release job unconditionally deleted the last extracted line, eating real content for the oldest CHANGELOG section; the line is now removed only when it is the next version header.
+
+### Changed
+- **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.2.5`.
+- **Healthcheck Hardening**: added explicit `HEALTHCHECK` parameters (`--interval=30s --timeout=10s --start-period=15s --retries=3`) and a 5 s curl timeout (`-m 5`).
+- **CI Registry Logins**: switched the GitLab registry `docker login` calls to `--password-stdin` so the password no longer appears in process arguments.
+- **Trivy Scan Gates the Published Digest**: on `main`/tag pipelines the build stage pushes a multi-platform candidate (`ci-<sha>`) to the GitLab registry and exports its manifest digest, Trivy scans both `linux/amd64` and `linux/arm64` of that pinned digest, and the publish jobs promote the same digest to the final tags with `docker buildx imagetools create` instead of rebuilding — the published images are bit-identical to what was scanned, and publishing fails closed if the digest is missing. MR/branch pipelines keep scanning the local build artifact.
+
 ## [1.2.4] - 2026-06-26
 
 ### Changed

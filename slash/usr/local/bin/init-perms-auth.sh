@@ -40,18 +40,35 @@ else
     rm -f "${REALIP_CONF}"
 fi
 
-# Handle basic auth
+# Handle basic auth. If the operator asked for auth (ENV_U/ENV_P set), a
+# failure to generate the htpasswd file must abort startup: continuing would
+# silently serve the share without the requested protection (fail closed).
 if [ -n "${ENV_U}" ] && [ -n "${ENV_P}" ]; then
     echo "Configuring basic authentication..."
-    if /usr/bin/htpasswd -cb /etc/angie/.htpasswd "${ENV_U}" "${ENV_P}" >/dev/null 2>&1; then
-        sed -i 's/#auth_/auth_/g' /etc/angie/angie.conf
+    if ! HTPASSWD_OUT=$(/usr/bin/htpasswd -cb /etc/angie/.htpasswd "${ENV_U}" "${ENV_P}" 2>&1); then
+        echo "ERROR: htpasswd failed, refusing to start without the requested basic auth: ${HTPASSWD_OUT}" >&2
+        exit 1
     fi
+    sed -i 's/#auth_/auth_/g' /etc/angie/angie.conf
 fi
 
 # Handle h5ai admin password
+OPTIONS_JSON=/usr/share/h5ai/_h5ai/private/conf/options.json
+H5AI_ADMIN_PASSHASH=""
+
+# [ -w ] is unreliable here: as root it reports read-only mounts as writable
+# (EROFS is ignored). Probe by opening the file for append, which does not
+# modify it but fails on a read-only mount.
+options_json_writable() {
+    ( : >> "${OPTIONS_JSON}" ) 2>/dev/null
+}
+
 if [ -n "${H5AI_ADMIN_PASSWORD}" ]; then
     echo "Configuring h5ai admin password..."
     H5AI_ADMIN_PASSHASH=$(echo -n "${H5AI_ADMIN_PASSWORD}" | sha512sum | cut -d' ' -f1)
+elif [ -f "${OPTIONS_JSON}" ] && ! options_json_writable; then
+    # Read-only custom mount: the operator manages the passhash themselves.
+    echo "H5AI_ADMIN_PASSWORD not set and ${OPTIONS_JSON} is read-only: keeping the existing passhash"
 else
     echo "H5AI_ADMIN_PASSWORD not set. Generating a random password..."
     RANDOM_PASS=$(php84 -r 'echo bin2hex(random_bytes(16));')
@@ -61,6 +78,16 @@ else
     H5AI_ADMIN_PASSHASH=$(echo -n "${RANDOM_PASS}" | sha512sum | cut -d' ' -f1)
 fi
 
-if [ -f /usr/share/h5ai/_h5ai/private/conf/options.json ]; then
-    sed -i -E 's/"passhash":[[:space:]]*"[^"]*"/"passhash": "'"${H5AI_ADMIN_PASSHASH}"'"/g' /usr/share/h5ai/_h5ai/private/conf/options.json
+if [ -n "${H5AI_ADMIN_PASSHASH}" ] && [ -f "${OPTIONS_JSON}" ]; then
+    if ! options_json_writable; then
+        echo "ERROR: H5AI_ADMIN_PASSWORD is set but ${OPTIONS_JSON} is not writable (read-only mount?)" >&2
+        exit 1
+    fi
+    # Rewrite through a temp file + cat instead of sed -i: sed -i renames a
+    # temp file over the target, which fails with EBUSY when options.json is
+    # a single-file bind mount.
+    TMP_OPTIONS=$(mktemp)
+    sed -E 's/"passhash":[[:space:]]*"[^"]*"/"passhash": "'"${H5AI_ADMIN_PASSHASH}"'"/g' "${OPTIONS_JSON}" > "${TMP_OPTIONS}"
+    cat "${TMP_OPTIONS}" > "${OPTIONS_JSON}"
+    rm -f "${TMP_OPTIONS}"
 fi

@@ -96,6 +96,24 @@ test: build
 	fi
 	docker rm -f h5ai-test-random-pass
 
+	@echo "Testing container with a bind-mounted custom options.json..."
+	docker run --rm --entrypoint cat $(IMAGE_NAME):$(TAG) /usr/share/h5ai/_h5ai/private/conf/options.json > /tmp/h5ai-test-options.json
+	docker run -d --name h5ai-test-options -p 8890:80 -e H5AI_ADMIN_PASSWORD=myadminpassword \
+		-v /tmp/h5ai-test-options.json:/usr/share/h5ai/_h5ai/private/conf/options.json \
+		-v $(CURDIR):/share:ro $(IMAGE_NAME):$(TAG)
+	$(call wait_for_http,HTTP/1.1 200 OK,✓ Container ready with bind-mounted options.json,✗ Container failed to start with bind-mounted options.json,h5ai-test-options)
+	@expected_hash=$$(echo -n "myadminpassword" | sha512sum | cut -d' ' -f1); \
+	actual_hash=$$(grep -oE '"passhash":[[:space:]]*"[^"]*"' /tmp/h5ai-test-options.json | cut -d'"' -f4); \
+	if [ "$$actual_hash" = "$$expected_hash" ]; then \
+		echo "✓ passhash updated in the bind-mounted options.json"; \
+	else \
+		echo "✗ Bind-mounted options.json test failed: expected $$expected_hash, got $$actual_hash"; \
+		docker rm -f h5ai-test-options; \
+		exit 1; \
+	fi
+	docker rm -f h5ai-test-options
+	rm -f /tmp/h5ai-test-options.json
+
 	@echo "Testing container health check with basic authentication enabled..."
 	docker run -d --name h5ai-test-health -p 8890:80 -e ENV_U=admin -e ENV_P=secret \
 		--health-interval=2s --health-timeout=5s --health-retries=3 --health-start-period=2s \
@@ -133,5 +151,6 @@ test: build
 	@echo "All tests passed successfully!"
 
 clean:
-	docker rm -f h5ai-test-auth h5ai-test-noauth h5ai-test-admin-pass h5ai-test-random-pass h5ai-test-health h5ai-test-realip 2>/dev/null || true
+	docker rm -f h5ai-test-auth h5ai-test-noauth h5ai-test-admin-pass h5ai-test-random-pass h5ai-test-options h5ai-test-health h5ai-test-realip 2>/dev/null || true
 	docker rmi $(IMAGE_NAME):$(TAG) 2>/dev/null || true
+	rm -f /tmp/h5ai-test-options.json
