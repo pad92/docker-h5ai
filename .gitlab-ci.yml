@@ -62,9 +62,9 @@ build:
           -t "$CANDIDATE_IMAGE" \
           --cache-from "type=registry,ref=$CI_REGISTRY_IMAGE:cache" \
           .
-        CANDIDATE_DIGEST=$(docker buildx imagetools inspect "$CANDIDATE_IMAGE" --format '{{.Manifest.Digest}}')
+        CANDIDATE_DIGEST=$(docker buildx imagetools inspect "$CANDIDATE_IMAGE" --format '{{.Manifest.Digest}}' 2>/dev/null | grep -o -E 'sha256:[a-f0-9]{64}' | cut -d: -f2)
         echo "CANDIDATE_DIGEST=${CANDIDATE_DIGEST:-none}" > build.env
-        echo "Candidate pushed: $CI_REGISTRY_IMAGE@$CANDIDATE_DIGEST"
+        echo "Candidate pushed: $CI_REGISTRY_IMAGE@sha256:${CANDIDATE_DIGEST:-none}"
       else
         echo "CANDIDATE_DIGEST=none" > build.env
       fi
@@ -169,8 +169,8 @@ scan:trivy:
         export TRIVY_USERNAME="$CI_REGISTRY_USER"
         export TRIVY_PASSWORD="$CI_REGISTRY_PASSWORD"
         for platform in linux/amd64 linux/arm64; do
-          echo "Scanning $CI_REGISTRY_IMAGE@$CANDIDATE_DIGEST ($platform)..."
-          trivy image --platform "$platform" --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed "$CI_REGISTRY_IMAGE@$CANDIDATE_DIGEST"
+          echo "Scanning $CI_REGISTRY_IMAGE@sha256:$CANDIDATE_DIGEST ($platform)..."
+          trivy image --platform "$platform" --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed "$CI_REGISTRY_IMAGE@sha256:$CANDIDATE_DIGEST"
         done
       else
         trivy image --input image.tar --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed
@@ -225,8 +225,8 @@ scan:trivy:
         exit 1
       fi
 
-      echo "Promoting scanned candidate $CI_REGISTRY_IMAGE@$CANDIDATE_DIGEST to: $TAGS_ARGS"
-      docker buildx imagetools create $TAGS_ARGS "$CI_REGISTRY_IMAGE@$CANDIDATE_DIGEST"
+      echo "Promoting scanned candidate $CI_REGISTRY_IMAGE@sha256:$CANDIDATE_DIGEST to: $TAGS_ARGS"
+      docker buildx imagetools create $TAGS_ARGS "$CI_REGISTRY_IMAGE@sha256:$CANDIDATE_DIGEST"
 
 publish:gitlab:
   extends: .publish-template
