@@ -34,8 +34,9 @@ build:
     BUILDER_NAME: "builder-$CI_JOB_ID"
   script:
     # Set up QEMU for multi-platform build compatibility
+    - docker run --privileged --rm tonistiigi/binfmt --uninstall qemu-* || true
     - docker run --privileged --rm tonistiigi/binfmt --install all || true
-    - docker buildx create --name $BUILDER_NAME --use
+    - docker buildx create --name $BUILDER_NAME --use --bootstrap
     # Log in to GitLab Container Registry to push cache
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
     # Build local single-platform image and push build cache
