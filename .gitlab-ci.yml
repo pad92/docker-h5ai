@@ -81,12 +81,14 @@ build:candidate:
       docker buildx build \
         --platform linux/amd64,linux/arm64 \
         --push \
+        --metadata-file build-metadata.json \
         -t "$CANDIDATE_IMAGE" \
         --cache-from "type=registry,ref=$CI_REGISTRY_IMAGE:cache" \
         .
-      CANDIDATE_DIGEST=$(docker buildx imagetools inspect "$CANDIDATE_IMAGE" --format '{{.Digest}}' 2>/dev/null)
+      CANDIDATE_DIGEST=$(sed -n 's/.*"containerimage.digest":"\([^"]*\)".*/\1/p' build-metadata.json | head -n1)
       printf 'CANDIDATE_DIGEST=%s\n' "${CANDIDATE_DIGEST:-none}" > build.env
       echo "Candidate pushed: $CANDIDATE_IMAGE@${CANDIDATE_DIGEST:-none}"
+      rm -f build-metadata.json
   artifacts:
     reports:
       dotenv: build.env
