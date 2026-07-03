@@ -63,10 +63,10 @@ build:
           --cache-from "type=registry,ref=$CI_REGISTRY_IMAGE:cache" \
           .
         CANDIDATE_DIGEST=$(docker buildx imagetools inspect "$CANDIDATE_IMAGE" --format '{{.Manifest.Digest}}')
-        echo "CANDIDATE_DIGEST=$CANDIDATE_DIGEST" > build.env
+        echo "CANDIDATE_DIGEST=${CANDIDATE_DIGEST:-none}" > build.env
         echo "Candidate pushed: $CI_REGISTRY_IMAGE@$CANDIDATE_DIGEST"
       else
-        : > build.env
+        echo "CANDIDATE_DIGEST=none" > build.env
       fi
   after_script:
     - docker buildx rm $BUILDER_NAME || true
@@ -162,7 +162,7 @@ scan:trivy:
     # platforms. On MR/branch pipelines, scan the local build artifact.
     - |
       if [ "$CI_COMMIT_BRANCH" = "main" ] || [ -n "$CI_COMMIT_TAG" ]; then
-        if [ -z "$CANDIDATE_DIGEST" ]; then
+        if [ -z "$CANDIDATE_DIGEST" ] || [ "$CANDIDATE_DIGEST" = "none" ]; then
           echo "ERROR: CANDIDATE_DIGEST not exported by the build stage" >&2
           exit 1
         fi
@@ -220,7 +220,7 @@ scan:trivy:
         exit 0
       fi
 
-      if [ -z "$CANDIDATE_DIGEST" ]; then
+      if [ -z "$CANDIDATE_DIGEST" ] || [ "$CANDIDATE_DIGEST" = "none" ]; then
         echo "ERROR: CANDIDATE_DIGEST not exported by the build stage, refusing to publish an unscanned image" >&2
         exit 1
       fi
