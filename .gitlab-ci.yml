@@ -32,6 +32,10 @@ build:
   image: docker:28
   variables:
     BUILDER_NAME: "builder-$CI_JOB_ID"
+  # binfmt install/uninstall below mutates the shared runner host; serialize
+  # builds on this runner so concurrent pipelines cannot race each other's
+  # QEMU registration.
+  resource_group: docker-build
   script:
     # Set up QEMU for multi-platform build compatibility
     - docker run --privileged --rm tonistiigi/binfmt --uninstall qemu-* || true
@@ -61,8 +65,10 @@ build:
           --push \
           -t "$CANDIDATE_IMAGE" \
           --cache-from "type=registry,ref=$CI_REGISTRY_IMAGE:cache" \
+          --cache-to "type=registry,ref=$CI_REGISTRY_IMAGE:cache,mode=max" \
+          --metadata-file metadata.json \
           .
-        CANDIDATE_DIGEST=$(docker buildx imagetools inspect "$CANDIDATE_IMAGE" --format '{{.Manifest.Digest}}' 2>/dev/null | grep -o -E 'sha256:[a-f0-9]{64}' | cut -d: -f2)
+        CANDIDATE_DIGEST=$(grep -o '"containerimage.digest":[[:space:]]*"sha256:[a-f0-9]\{64\}"' metadata.json | grep -o 'sha256:[a-f0-9]\{64\}' | cut -d: -f2)
         echo "CANDIDATE_DIGEST=${CANDIDATE_DIGEST:-none}" > build.env
         echo "Candidate pushed: $CI_REGISTRY_IMAGE@sha256:${CANDIDATE_DIGEST:-none}"
       else
@@ -189,6 +195,9 @@ scan:trivy:
 .publish-template:
   stage: publish
   image: docker:28
+  # Promotion only needs the exported digest, not the local image.tar artifact.
+  dependencies:
+    - build
   script:
     - |
       if [ -f build.env ]; then
