@@ -1,8 +1,8 @@
 # Docker h5ai
 
-A Docker image for [h5ai](https://larsjung.de/h5ai/), a modern HTTP web server indexer. 
+A Docker image for [h5ai](https://larsjung.de/h5ai/), a modern file indexer for HTTP web servers.
 
-Built on top of **Angie 1.11+ (Alpine)** and **PHP 8.4** with **s6-overlay** for process management.
+Built on Angie 1.11+ (Alpine) and PHP 8.4, with s6-overlay as the process supervisor.
 
 [![GitHub issues](https://img.shields.io/github/issues/pad92/docker-h5ai.svg)](https://github.com/pad92/docker-h5ai)
 [![Docker Pulls](https://img.shields.io/docker/pulls/pad92/docker-h5ai.svg)](https://hub.docker.com/r/pad92/docker-h5ai/)
@@ -11,17 +11,18 @@ Built on top of **Angie 1.11+ (Alpine)** and **PHP 8.4** with **s6-overlay** for
 
 ## Features
 
-- **PHP 8.4 & Angie 1.11+** (Alpine-based, lightweight and secure).
-- **Basic Authentication** (built-in wrapper protecting both the directory indexing page and direct static file downloads).
-- **Hardened Security Headers** (`X-Frame-Options`, `X-Content-Type-Options`, `X-XSS-Protection` enabled).
-- **Proper UNIX Signal Handling** (Graceful shutdowns under Docker).
-- **s6-overlay Process Management** (Auto-restart of services on failure).
+- PHP 8.4 and Angie 1.11+ on an Alpine base.
+- Optional basic authentication covering both the listing page and direct file downloads.
+- Security headers set by default: `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` and a `Content-Security-Policy` tuned for h5ai.
+- Correct UNIX signal handling, so `docker stop` shuts the services down cleanly.
+- s6-overlay restarts a crashed service instead of leaving a half-dead container.
+- All logs go to stdout/stderr; nothing is written inside the container.
 
 ---
 
 ## Usage
 
-### Basic Usage
+### Basic usage
 
 Mount the directory you want to share to `/share`:
 
@@ -31,9 +32,9 @@ docker container run -d -p 80:80 \
   pad92/docker-h5ai
 ```
 
-### With Basic Authentication
+### Basic authentication
 
-To secure the index page and all files under `/share`, define the username and password using the `ENV_U` and `ENV_P` environment variables:
+To protect the index page and all files under `/share`, set a username and password with the `ENV_U` and `ENV_P` environment variables:
 
 ```bash
 docker container run -d -p 80:80 \
@@ -43,9 +44,9 @@ docker container run -d -p 80:80 \
   pad92/docker-h5ai
 ```
 
-### With h5ai Info Page Password (Administration)
+### h5ai info page password (administration)
 
-To secure the h5ai diagnostic/info page (located at `/_h5ai/public/index.php`), define the password using the `H5AI_ADMIN_PASSWORD` environment variable. The container will automatically generate the required SHA-512 hash and update `options.json` at startup:
+To protect the h5ai diagnostic/info page (at `/_h5ai/public/index.php`), set the `H5AI_ADMIN_PASSWORD` environment variable. At startup the container hashes it (SHA-512) and writes the hash into `options.json`:
 
 ```bash
 docker container run -d -p 80:80 \
@@ -55,14 +56,14 @@ docker container run -d -p 80:80 \
 ```
 
 > [!NOTE]
-> If `H5AI_ADMIN_PASSWORD` is not defined (or empty), a cryptographically secure random 32-character password is automatically generated at boot, written to the startup logs, and hashed in `options.json` to keep the info page secure by default.
+> If `H5AI_ADMIN_PASSWORD` is unset or empty, the container generates a random 32-character password at boot and prints it to the startup logs, so the info page is never left unprotected.
 
 ### Permissions (PUID / PGID)
 
 By default the services (Angie and PHP-FPM) run as the built-in `angie` user
 (`uid 100`). If the files you mount under `/share` are owned by a different
-uid/gid and are not world-readable, h5ai cannot read them and shows an **empty
-listing**. Set `PUID`/`PGID` to the owner of your shared files so the runtime
+uid/gid and are not world-readable, h5ai cannot read them and shows an empty
+listing. Set `PUID`/`PGID` to the owner of your shared files so the runtime
 account is remapped to match:
 
 ```bash
@@ -74,9 +75,10 @@ docker container run -d -p 80:80 \
 ```
 
 - `PUID` / `PGID`: uid/gid the `angie` account is remapped to at startup. When
-  unset, the defaults (`100`/`101`) are kept — fine for world-readable shares.
+  unset, the defaults (`100`/`101`) are kept, which is fine for world-readable
+  shares.
 
-### Behind a Reverse Proxy (Real Client IP)
+### Behind a reverse proxy (real client IP)
 
 When the container runs behind a reverse proxy, `$remote_addr` (and the access log) would
 otherwise show the proxy's IP. Set `REAL_IP_FROM` to the trusted proxy network(s) so Angie
@@ -97,7 +99,7 @@ docker container run -d -p 80:80 \
 > Only enable this for proxies you trust. `X-Forwarded-For` can be spoofed by any client that
 > reaches Angie directly, so listing untrusted networks lets clients forge their logged IP.
 
-### With Custom h5ai Options
+### Custom h5ai options
 
 To override the default [options.json](https://raw.githubusercontent.com/lrsjng/h5ai/v0.29.0/src/_h5ai/private/conf/options.json) file, mount your custom file into `/usr/share/h5ai/_h5ai/private/conf/options.json`:
 
@@ -113,14 +115,14 @@ docker container run -d -p 80:80 \
 > `passhash` untouched instead of generating a random admin password. Setting
 > `H5AI_ADMIN_PASSWORD` together with a read-only `options.json` is an error and aborts startup.
 
-### Cache Paths (Thumbnails & Metadata)
+### Cache paths (thumbnails and metadata)
 
-The application caches generated thumbnails and metadata in the following paths within the container:
+h5ai caches generated thumbnails and metadata in two places inside the container:
 
-- **Public Cache (Thumbnails cache)**: `/usr/share/h5ai/_h5ai/public/cache/`
-- **Private Cache**: `/usr/share/h5ai/_h5ai/private/cache/`
+- Public cache (thumbnails): `/usr/share/h5ai/_h5ai/public/cache/`
+- Private cache: `/usr/share/h5ai/_h5ai/private/cache/`
 
-To persist these thumbnails across container restarts or recreations, mount volumes to these paths:
+To keep thumbnails across container restarts or recreations, mount volumes on these paths:
 
 ```bash
 docker container run -d -p 80:80 \
@@ -131,12 +133,12 @@ docker container run -d -p 80:80 \
 ```
 
 > [!NOTE]
-> Upon container startup, an s6-overlay initialization task automatically ensures that the cache directories have the correct ownership (`angie:angie`) and permissions (`755` for directories, `644` for files) so that the PHP process can write to them.
-
+> At startup an init task fixes ownership (`angie:angie`) and permissions (`755` for
+> directories, `644` for files) on the cache directories so the PHP process can write to them.
 
 ---
 
-## Docker Compose Example
+## Docker Compose example
 
 A ready-to-use example is provided in [docker-compose.yml](docker-compose.yml)
 (`docker-compose.dev.yml` is the development harness). Minimal version:
@@ -166,24 +168,14 @@ docker compose up -d
 
 ## Development
 
-A `Makefile` is provided to help with local development, testing, and security scans:
+A `Makefile` covers local development, testing and security scans:
 
-- **Build the image**:
-  ```bash
-  make build
-  ```
-- **Run functional tests** (spins up containers and verifies authentication behaviors):
-  ```bash
-  make test
-  ```
-- **Vulnerability scan** (uses Trivy to scan the local image):
-  ```bash
-  make trivy
-  ```
-- **Clean local containers and images**:
-  ```bash
-  make clean
-  ```
+```bash
+make build   # build the image
+make test    # build, then run the container test suite (auth, passhash, real_ip, healthcheck)
+make trivy   # build, then scan the image with Trivy
+make clean   # remove test containers and the built image
+```
 
 ---
 
