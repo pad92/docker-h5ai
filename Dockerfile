@@ -5,7 +5,7 @@ FROM php:8.4-alpine AS builder
 ARG H5AI_VERSION
 ENV H5AI_VERSION=${H5AI_VERSION}
 
-ARG S6_OVERLAY_VERSION=3.1.6.2
+ARG S6_OVERLAY_VERSION=3.2.3.0
 ARG TARGETARCH
 
 RUN case "${TARGETARCH}" in \
@@ -51,9 +51,13 @@ ENV S6_KEEP_ENV=1
 ENV S6_CMD_WAIT_FOR_SERVICES_MAXTIME=30000
 ENV H5AI_ROOT_PATH=/share
 
+# Only extensions actually used by the h5ai PHP code are installed:
+# exif/gd/imagick (thumbnails), fileinfo (download mimetypes), mbstring,
+# session, sqlite3 (CacheDB uses the SQLite3 class, not PDO), zip
+# (ZipArchive) plus the tar/zip CLIs for packaged downloads.
+# angie-console-light ships with the base image but nothing serves it.
 RUN apk upgrade --no-cache && apk add --no-cache \
     apache2-utils \
-    curl \
     ffmpeg \
     imagemagick \
     imagemagick-raw \
@@ -63,21 +67,17 @@ RUN apk upgrade --no-cache && apk add --no-cache \
     php84-fileinfo \
     php84-fpm \
     php84-gd \
-    php84-intl \
     php84-mbstring \
     php84-opcache \
     php84-openssl \
     php84-pecl-imagick \
     php84-session \
-    php84-simplexml \
     php84-sqlite3 \
-    php84-pdo_sqlite \
-    php84-xml \
-    php84-xmlwriter \
     php84-zip \
     shadow \
     tzdata \
-    zip
+    zip \
+    && apk del angie-console-light
 
 COPY --from=builder /h5ai/build/_h5ai /usr/share/h5ai/_h5ai
 COPY --from=builder /s6-overlay/ /
@@ -112,7 +112,10 @@ LABEL maintainer="pad92" \
 EXPOSE 80
 
 ENTRYPOINT ["/init"]
-# Accept 200 (open) and 401 (basic auth enabled) as healthy; fail only if Angie is unreachable
+# Accept 200 (open) and 401 (basic auth enabled) as healthy; fail only if
+# Angie is unreachable. Uses busybox wget so the image does not need curl.
+# 127.0.0.1 instead of localhost: busybox wget prefers ::1 while Angie
+# listens on IPv4 only.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD code=$(curl -s -m 5 -o /dev/null -w '%{http_code}' http://localhost/) \
-    && { [ "$code" = 200 ] || [ "$code" = 401 ]; } || exit 1
+    CMD wget -S -T 5 -O /dev/null http://127.0.0.1/ 2>&1 \
+    | grep -qE 'HTTP/1\.[01] (200|401)' || exit 1

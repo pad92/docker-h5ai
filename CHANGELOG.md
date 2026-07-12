@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+- **s6-overlay Upgrade**: Updated s6-overlay from `3.1.6.2` to `3.2.3.0`. Upstream removed the default service startup timeout in 3.2.0.0, which does not affect this image since `S6_CMD_WAIT_FOR_SERVICES_MAXTIME=30000` is set explicitly.
+- **Slimmer Image**: Removed packages nothing uses: `php84-intl` (plus its ICU data, h5ai never calls intl functions), `php84-xml`, `php84-simplexml`, `php84-xmlwriter`, `php84-pdo_sqlite` (CacheDB uses the `SQLite3` class directly) and the base image's `angie-console-light` console (never served). The `HEALTHCHECK` now uses busybox `wget` instead of `curl`, so `curl` is gone too. Same functionality, roughly 15 MB less.
+- **Angie Config Cleanup**: Dropped the obsolete `msie6` keepalive/gzip directives and added `application/wasm` to `gzip_types` for h5ai's WebAssembly assets.
+
+### Fixed
+- **README Security Headers**: The feature list still advertised `X-XSS-Protection`, which was replaced by `Referrer-Policy` and `Content-Security-Policy` back in 1.2.0-1.
+
 ## [1.2.6] - 2026-07-12
 
 ### Added
@@ -29,7 +39,7 @@ All notable changes to this project will be documented in this file.
 - **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.2.5`.
 - **Healthcheck Hardening**: added explicit `HEALTHCHECK` parameters (`--interval=30s --timeout=10s --start-period=15s --retries=3`) and a 5 s curl timeout (`-m 5`).
 - **CI Registry Logins**: switched the GitLab registry `docker login` calls to `--password-stdin` so the password no longer appears in process arguments.
-- **Trivy Scan Gates the Published Digest**: on `main`/tag pipelines the build stage pushes a multi-platform candidate (`ci-<sha>`) to the GitLab registry and exports its manifest digest, Trivy scans both `linux/amd64` and `linux/arm64` of that pinned digest, and the publish jobs promote the same digest to the final tags with `docker buildx imagetools create` instead of rebuilding — the published images are bit-identical to what was scanned, and publishing fails closed if the digest is missing. MR/branch pipelines keep scanning the local build artifact.
+- **Trivy Scan Gates the Published Digest**: on `main`/tag pipelines the build stage pushes a multi-platform candidate (`ci-<sha>`) to the GitLab registry and exports its manifest digest, Trivy scans both `linux/amd64` and `linux/arm64` of that pinned digest, and the publish jobs promote the same digest to the final tags with `docker buildx imagetools create` instead of rebuilding. The published images are bit-identical to what was scanned, and publishing fails closed if the digest is missing. MR/branch pipelines keep scanning the local build artifact.
 
 ## [1.2.4] - 2026-06-26
 
@@ -40,7 +50,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.2.3`.
-- **Content-Security-Policy**: Relaxed the CSP to support h5ai's WebAssembly-based features and media previews — added `'wasm-unsafe-eval'` to `script-src`, introduced `worker-src 'self' blob:` and `media-src 'self' blob:`.
+- **Content-Security-Policy**: Relaxed the CSP to support h5ai's WebAssembly-based features and media previews: added `'wasm-unsafe-eval'` to `script-src`, plus `worker-src 'self' blob:` and `media-src 'self' blob:`.
 
 ## [1.2.2-1] - 2026-06-26
 
@@ -68,7 +78,7 @@ All notable changes to this project will be documented in this file.
 - **Makefile**: Added `--load` to `docker buildx build` so the built image is available to the local Docker store; added `make test` cases covering the health check with basic auth enabled and the `REAL_IP_FROM` configuration.
 
 ### Fixed
-- **Health Check With Basic Authentication**: The `HEALTHCHECK` no longer marks the container as `unhealthy` when basic auth is enabled — it now treats both `200` and `401` as healthy while still failing when Angie is unreachable.
+- **Health Check With Basic Authentication**: The `HEALTHCHECK` no longer marks the container as `unhealthy` when basic auth is enabled. It now treats both `200` and `401` as healthy while still failing when Angie is unreachable.
 - **Init Script Logic**: Removed a no-op `$?` check after `htpasswd` (dead code under `set -e`) by guarding the command directly with the conditional.
 
 ## [1.2.0-1] - 2026-06-21
@@ -109,6 +119,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.1.5` (resolves aggressive caching of directory data by adding HTTP cache control headers to API responses, fixes folder list refresh tree-view updates, fixes item model bug that marked parent content fetched prematurely, and restores search/filter colors/visibility in dark mode).
+
 ## [1.1.4] - 2026-06-20
 
 ### Added
@@ -123,6 +134,7 @@ All notable changes to this project will be documented in this file.
 - **Redundant Permissions Configuration**: Cleaned up build-time cache directories `chown` in the Dockerfile, relying entirely on the runtime s6-overlay permission setup.
 
 ## [1.1.3] - 2026-06-19
+
 ### Changed
 - **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.1.3` (adds dynamic version display in the info page header/backlinks, adjusted build versioning logic, and CI/CD release pipeline fixes).
 
@@ -131,6 +143,7 @@ All notable changes to this project will be documented in this file.
 - **Permissions Optimization**: Optimized the startup permissions initialization script to only run `chown` and `chmod` on files/directories with incorrect owner/group or permissions, speeding up container boot when cache volumes are populated.
 
 ## [1.1.2] - 2026-06-19
+
 ### Added
 - **Administration Password Configuration**: Added support for a `H5AI_ADMIN_PASSWORD` environment variable to automatically set the SHA-512 `passhash` configuration in `options.json` at startup. If not provided, a random password is generated at boot and written to the startup logs.
 
@@ -141,30 +154,36 @@ All notable changes to this project will be documented in this file.
 - **Multi-Platform Support**: Added dynamic architecture mapping in the Dockerfile builder stage to download the matching s6-overlay binaries for `TARGETARCH`, so the same Dockerfile builds both `amd64` and `arm64` images.
 
 ## [1.1.1] - 2026-06-19
+
 ### Changed
 - **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.1.1` (adds loop detection and symlink verification to prevent infinite recursion, and visited path tracking to prevent circular traversals).
 
 ## [1.1.0] - 2026-06-19
+
 ### Changed
 - **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.1.0` (redesigned modern glassmorphic audio player with persistent playback and queue management, optimized folder size caching, secured CacheDB queries, and added new automated CI/CD and security audit checks).
 - **Build Process Optimization**: Modified the Docker image builder stage to download the pre-compiled `h5ai` zip package directly from the public GitLab Generic Packages Registry instead of git cloning and compiling it from source.
 
 ## [1.0.0] - 2026-06-18
+
 ### Changed
 - **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.0.0` (migrated build system from ghu to gulp, added WebP thumbnail support, limited image previews to 80% screen width, and fixed CacheDB/filesize check errors).
 
 ## [0.30.0-17] - 2026-06-18
+
 ### Changed
 - **Web Server Migration**: Migrated web server from Nginx to Angie (version 1.11.7-minimal, Alpine-based).
 - **Configuration & Paths Updates**: Migrated configuration paths and files to `/etc/angie/angie.conf`, updated supervisord task definitions, and adjusted file ownership/permissions to use the `angie` user.
 
 ## [0.30.0-16] - 2026-06-18
+
 ### Changed
 - **Base Image Upgrade**: Upgraded `nginx` base image from `1.26` to `1.30`.
 - **PHP Version Upgrade**: Upgraded `php` base image to version `8.3` (Alpine).
 - **OpenSSL Update**: Upgraded OpenSSL to version `3.3.7-r0` to resolve security vulnerabilities and build compatibility issues.
 
 ## [0.30.0-15] - 2026-06-14
+
 ### Changed
 - **h5ai Base Upgrade**: Upgraded built h5ai base version to `0.30.0-pad92.8`.
   - Integrated Pull Request #765 for improved video thumbnail generation and prevention of thumbnail DoS exploit.
@@ -173,28 +192,33 @@ All notable changes to this project will be documented in this file.
   - Configured CSS object-fit on thumbnails for responsive square cropping.
 
 ## [0.30.0-14] - 2026-06-13
+
 ### Changed
 - **h5ai Base Upgrade**: Upgraded built h5ai base version to `0.30.0-pad92.7`.
   - Added persistent folder size caching and background cache warming (`warm-cache.php`).
   - Added cache options in `options.json` and updated configuration documentation.
 
 ## [0.30.0-13] - 2026-06-13
+
 ### Changed
 - **h5ai Base Upgrade**: Upgraded built h5ai base version to `0.30.0-pad92.6`.
 - **Raw Image Support**: Added `imagemagick-raw` and `libraw` packages to enable previews for RAW photos.
 
 ## [0.30.0-12] - 2026-06-12
+
 ### Changed
 - **h5ai Base Upgrade**: Upgraded built h5ai base version to `0.30.0-pad92.5`.
   - Added configuration documentation file `doc/configuration.md`.
   - Modernized photo preview to display EXIF metadata in a responsive glassmorphic panel.
 
 ## [0.30.0-11] - 2026-06-12
+
 ### Changed
 - **h5ai Base Upgrade**: Upgraded built h5ai base version to `0.30.0-pad92.4`.
   - Optimized and standardized UI icon SVG markup and structure.
 
 ## [0.30.0-10] - 2026-06-12
+
 ### Fixed
 - **Startup Warnings & Cache Safety**:
   - Silenced Supervisord critical warning when running as root without dropped privileges.
@@ -202,14 +226,17 @@ All notable changes to this project will be documented in this file.
   - Hardened permissions initialization script by creating cache folders dynamically before configuring their permissions.
 
 ## [0.30.0-9] - 2026-06-12
+
 ### Added
 - **Automatic Cache Permissions**: Added a Supervisor initialization task (`init_perms.sh`) to automatically set the correct ownership (`nginx:www-data`) and write permissions (`755`) on cache directories at startup.
 
 ## [0.30.0-8] - 2026-06-12
+
 ### Changed
 - **h5ai Base Upgrade**: Upgraded built h5ai base version to `0.30.0-pad92.3`.
 
 ## [0.30.0-7] - 2026-06-12
+
 ### Added
 - **Resource Limits**: Configured CPU limits (`cpus: '1.0'`) and memory limits (`memory: 1G`) with reservations in `docker-compose.yml`.
 - **PHP Custom Configuration**: Added `custom.ini` with custom memory limits (`memory_limit = 512M`), execution time (`max_execution_time = 120`), and optimised realpath cache and output buffering.
@@ -221,6 +248,7 @@ All notable changes to this project will be documented in this file.
 - **Docker Compose Cleanup**: Removed obsolete version parameter and adjusted volume structure.
 
 ## [0.30.0-6] - 2026-06-12
+
 ### Added
 - **Persistent Cache Documentation**: Added instructions in `README.md` to persist public (thumbnails) and private cache across container restarts via volume mounts.
 
@@ -228,6 +256,7 @@ All notable changes to this project will be documented in this file.
 - **h5ai Base Upgrade**: Upgraded the compiled h5ai base version to `0.30.0-pad92.1` using the `pad92/h5ai` custom fork, which integrates `movi-player` for modernized video previews, upgrades the `marked` library, and enables cross-origin isolation.
 
 ## [0.30.0-5] - 2026-06-12
+
 ### Added
 - **GitLab Release Automation**: Configured `release-cli` in the CI/CD pipeline to automatically generate GitLab Release pages from tag descriptions in `CHANGELOG.md`.
 - **Security Headers**: Enabled `X-Frame-Options`, `X-Content-Type-Options`, and `X-XSS-Protection` headers in the Nginx configuration.
@@ -248,11 +277,13 @@ All notable changes to this project will be documented in this file.
 - **Functional Validation**: Rewrote authentication test scripts to resolve test runner gateways by dynamically querying internal container IP addresses on the bridge network.
 
 ## [0.30.0-4] - 2023-10-10
+
 ### Fixed
 - HTTP Real IP configuration.
 - HTTP logs redirection.
 
 ## [0.30.0-3] - 2023-10-03
+
 ### Changed
 - Configure multi-platform builds in GitLab CI (supporting `linux/arm64`, `linux/amd64`, and `linux/arm/v7`).
 - Configure Container Scanning and SAST in GitLab CI.
@@ -261,6 +292,7 @@ All notable changes to this project will be documented in this file.
 - GitLab CI tagging behavior.
 
 ## [0.30.0-2] - 2023-05-14
+
 ### Changed
 - Update supervisord configuration.
 - Upgrade PHP to version 8.1.
@@ -270,11 +302,13 @@ All notable changes to this project will be documented in this file.
 - Repository badge links.
 
 ## [0.30.0-1] - 2022-07-06
+
 ### Changed
 - Upgrade base images and runtimes to PHP 8.0.
 - Apply Dockerfile security upgrades to reduce package vulnerabilities.
 
 ## [0.30.0] - 2021-11-30
+
 ### Added
 - Basic Authentication support via `ENV_U` (Username) and `ENV_P` (Password) environment variables.
 - MIT License file.
@@ -282,14 +316,17 @@ All notable changes to this project will be documented in this file.
 - Clean up CI configurations.
 
 ## [0.29.2-2] - 2019-10-27
+
 ### Changed
 - Explicitly set docker image version labels.
 
 ## [0.29.2-1] - 2019-07-29
+
 ### Changed
 - Switch base image to `nginx:stable-alpine`.
 
 ## [0.29.2] - 2019-07-29
+
 ### Added
 - Process manager (Supervisord) to manage Nginx and PHP-FPM.
 - Image processing (Imagick) and missing system dependencies.
@@ -298,13 +335,16 @@ All notable changes to this project will be documented in this file.
 - Upgrade Alpine base to version 3.9.
 
 ## [0.29.0-2] - 2018-11-20
+
 ### Changed
 - Clean up and optimize build and runtime dependencies.
 
 ## [0.29.0-1] - 2018-07-10
+
 ### Fixed
 - PHP 7 error log paths.
 
 ## [0.29.0] - 2018-07-09
+
 ### Added
 - Initial release with basic h5ai functionality on Nginx/PHP.
