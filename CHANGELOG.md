@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.6] - 2026-07-12
+
+### Added
+- **Makefile `help` Target**: Added a `help` target listing available targets (`build`, `test`, `trivy`, `clean`) and made it the default goal when running `make` with no arguments.
+
+### Changed
+- **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.2.6`. Every icon (toolbar, tree, preview bar, and all file/folder types) is now self-hosted Font Awesome Free glyphs, including real brand marks where available (Android, Debian, Red Hat, Python, Rust, PHP, and more); the old "comity" icon theme is gone, merged into the sole `themes/default` theme.
+
+### Fixed
+- **Google Fonts Blocked by CSP**: h5ai loaded Ubuntu/Ubuntu Mono from a `fonts.googleapis.com` stylesheet and the bundled `movi-player` imported Google's Inter font; this project's `style-src 'self' 'unsafe-inline'` Content-Security-Policy silently blocked both. h5ai 1.2.6 self-hosts every font as `@font-face`, so no h5ai page requests an external host for icons, fonts, or styles anymore.
+
 ## [1.2.5] - 2026-07-03
 
 ### Added
