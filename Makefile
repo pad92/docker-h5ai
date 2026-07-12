@@ -1,7 +1,8 @@
-IMAGE_NAME = h5ai-local
-TAG = latest
+IMAGE_NAME ?= h5ai-local
+TAG ?= latest
 TEST_HOST ?= localhost
 TEST_RETRIES ?= 15
+TEST_CONTAINERS = h5ai-test-noauth h5ai-test-auth h5ai-test-admin-pass h5ai-test-random-pass h5ai-test-options h5ai-test-health h5ai-test-realip
 
 .PHONY: help build test trivy clean
 
@@ -162,6 +163,6 @@ test: build
 	@echo "All tests passed successfully!"
 
 clean:
-	docker rm -f h5ai-test-auth h5ai-test-noauth h5ai-test-admin-pass h5ai-test-random-pass h5ai-test-options h5ai-test-health h5ai-test-realip 2>/dev/null || true
+	docker rm -f $(TEST_CONTAINERS) 2>/dev/null || true
 	docker rmi $(IMAGE_NAME):$(TAG) 2>/dev/null || true
 	rm -f /tmp/h5ai-test-options.json
