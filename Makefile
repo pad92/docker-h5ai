@@ -3,7 +3,18 @@ TAG = latest
 TEST_HOST ?= localhost
 TEST_RETRIES ?= 15
 
-.PHONY: build test trivy clean
+.PHONY: help build test trivy clean
+
+.DEFAULT_GOAL := help
+
+help:
+	@echo "Usage: make [target]"
+	@echo ""
+	@echo "Targets:"
+	@echo "  build  Build the $(IMAGE_NAME):$(TAG) Docker image"
+	@echo "  test   Build the image and run the container test suite"
+	@echo "  trivy  Build the image and scan it with Trivy"
+	@echo "  clean  Remove test containers and the built image"
 
 define wait_for_http
 	@SUCCESS=false; \
