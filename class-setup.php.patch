@@ -1,7 +1,7 @@
 diff --git a/class-setup.php b/class-setup.php
 --- a/class-setup.php
 +++ b/class-setup.php
-@@ -121,9 +121,9 @@
+@@ -124,9 +124,9 @@
 
          $cmds = Json::load($cmds_cache_path);
          if (count($cmds) === 0 || $this->refresh) {
@@ -14,10 +14,10 @@ diff --git a/class-setup.php b/class-setup.php
 
              $cmd = match (true) {
                  $cmds['command'] => 'command -v',
-@@ -133,7 +133,7 @@
+@@ -136,7 +136,7 @@
              };
 
-             foreach (['avconv', 'avprobe', 'convert', 'du', 'ffmpeg', 'ffprobe', 'gm', 'tar', 'zip'] as $c) {
+             foreach (['avconv', 'convert', 'du', 'ffmpeg', 'gm', 'tar', 'zip'] as $c) {
 -                $cmds[$c] = ($cmd !== false) && (Util::exec_0($cmd . ' ' . $c) || Util::exec_0($cmd . ' ' . $c . '.exe'));
 +                $cmds[$c] = ($cmd !== false) && Util::exec_0($cmd . ' ' . $c . ' 2>/dev/null');
              }
