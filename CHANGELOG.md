@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - **README Security Headers**: The feature list still advertised `X-XSS-Protection`, which was replaced by `Referrer-Policy` and `Content-Security-Policy` back in 1.2.0-1.
+- **Broken Build Against h5ai 1.2.7**: h5ai 1.2.7 dropped the `avprobe`/`ffprobe` entries from the command-probe list in `class-setup.php`, shifting the context our local `class-setup.php.patch` (silencing missing-command shell noise) depended on; the build failed applying the patch. Updated the patch to match the new upstream source.
 
 ## [1.2.6] - 2026-07-12
 
