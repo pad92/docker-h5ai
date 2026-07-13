@@ -4,7 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.2.7] - 2026-07-13
+
 ### Changed
+- **h5ai Base Upgrade**: Upgraded default h5ai base version to `1.2.7`. Fixed the background cache warmer crashing on startup (`warm-cache.php` accessed PHP's `$_SESSION`, which does not exist in a CLI process, so it died before doing any work); the documented cron-triggered cache warming now actually runs. Removed the dead `google-analytics-ua` extension (Universal Analytics was shut down in 2023) — drop any `google-analytics-ua` block from a customized `options.json`, `piwik-analytics` (Matomo) is unaffected.
 - **s6-overlay Upgrade**: Updated s6-overlay from `3.1.6.2` to `3.2.3.0`. Upstream removed the default service startup timeout in 3.2.0.0, which does not affect this image since `S6_CMD_WAIT_FOR_SERVICES_MAXTIME=30000` is set explicitly.
 - **Slimmer Image**: Removed packages nothing uses: `php84-intl` (plus its ICU data, h5ai never calls intl functions), `php84-xml`, `php84-simplexml`, `php84-xmlwriter`, `php84-pdo_sqlite` (CacheDB uses the `SQLite3` class directly) and the base image's `angie-console-light` console (never served). The `HEALTHCHECK` now uses busybox `wget` instead of `curl`, so `curl` is gone too. Same functionality, roughly 15 MB less.
 - **Angie Config Cleanup**: Dropped the obsolete `msie6` keepalive/gzip directives and added `application/wasm` to `gzip_types` for h5ai's WebAssembly assets.
